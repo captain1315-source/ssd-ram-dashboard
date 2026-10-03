@@ -7,8 +7,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from inventory import (consume, grade, model_token, net_received, project, split_demand, total_ends,
-                       usage_sums, worst)
+from inventory import (consume, grade, group_demand, model_token, net_received, project, split_demand,
+                       total_ends, usage_sums, worst)
 from receipts import amount_mismatches, merge, monthly_receipts, resolve_maker
 
 
@@ -139,6 +139,35 @@ def test_negative_lot_is_not_consumed_further_by_other_usage():
     lots = [lot("K&C", "공용", -20), lot("Tammuz", "해외", 30)]
     consume(lots, "해외", 50)
     assert stocks(lots) == {"K&C": -20, "Tammuz": -20}
+
+
+# --- 모델별 우선 제조사 (예: TOPAZ 모델은 Crucial 먼저) ---
+
+def test_group_demand_separates_models_with_preferred_maker():
+    by_model = {"TOPAZ-1260/LPP57PNNB": 25, "TOPAZ-1270/LPP57PNNB": 25, "SAPH-660/RCRB57NNB95": 150, "ASTRA663/KOR67P2SNW95": 12}
+    prefer = lambda code: "Crucial" if "topaz" in code.lower() else None
+    groups, unknown = group_demand(by_model, {"LPP": "해외", "RCRB": "해외", "KOR": "국내"}, prefer)
+    assert groups == {("해외", "Crucial"): 50, ("해외", None): 150, ("국내", None): 12}
+    assert unknown == {}
+
+
+def test_preferred_maker_is_consumed_first_then_normal_order():
+    lots = [lot("K&C", "공용", 100), lot("Tammuz", "해외", 100), lot("Crucial", "해외", 30)]
+    consume(lots, "해외", 50, prefer="Crucial")
+    assert stocks(lots) == {"K&C": 100, "Tammuz": 80, "Crucial": 0}   # Crucial 30개를 다 쓰고 나머지는 Tammuz
+
+
+def test_project_takes_preferred_demand_from_its_maker_and_the_rest_in_listed_order():
+    # 실제 사례의 축소판: 해외 소요 417 중 TOPAZ 50은 Crucial에서, 나머지 367은 Tammuz에서
+    lots = [lot("K&C", "공용", 915), lot("Tammuz", "해외", 1995), lot("Crucial", "해외", 3000)]
+    step = {"inflow": {}, "demand": {("국내", None): 12, ("해외", None): 367, ("해외", "Crucial"): 50}}
+    assert project(lots, [step]) == [[903], [1628], [2950]]
+
+
+def test_split_demand_keeps_group_keys_and_custom_unknown_key():
+    raw = {("해외", "Crucial"): 1, ("해외", None): 3}
+    assert split_demand(100, raw, {}) == {("해외", "Crucial"): 25, ("해외", None): 75}
+    assert split_demand(100, {}, {}, unknown_key=("미분류", None)) == {("미분류", None): 100}
 
 
 def test_total_ends_follow_mrp_chain():

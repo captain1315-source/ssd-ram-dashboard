@@ -277,13 +277,13 @@ a:hover { text-decoration: underline; }
         <div class="meta" id="stockMeta"></div>
       </div>
       <div class="scroll" id="stockTable"></div>
-      <p class="caption">월초재고에 당월입고와 입고대기(당월 납기 발주잔량)를 더하고 월별 소요를 뺀 월말 재고입니다. 국내 소요는 국내·공용 재고에서, 해외 소요는 해외 재고를 먼저 쓰고 모자라면 공용 재고에서 뺍니다. 붉은 칸은 부족, 노란 칸은 다음 달 소진 예상입니다.</p>
+      <p class="caption">월초재고에 당월입고와 입고대기(당월 납기 발주잔량)를 더하고 월별 소요를 뺀 월말 재고입니다. 국내 소요는 국내·공용 재고에서, 해외 소요는 해외 재고를 먼저 쓰고 모자라면 공용 재고에서 뺍니다. 먼저 쓸 제조사가 정해진 모델의 소요는 그 제조사 재고에서 먼저 뺍니다. 붉은 칸은 부족, 노란 칸은 다음 달 소진 예상입니다.</p>
       <p class="caption" id="adjustNote" hidden></p>
     </div>
     <div class="card">
       <div class="card-head">
         <h2><i class="fa-solid fa-calendar-days"></i>용도별 월 소요</h2>
-        <div class="meta">당월은 생산계획, 이후는 S&amp;OP 기준</div>
+        <div class="meta">당월은 생산계획, 이후는 S&amp;OP 기준<br>S&amp;OP가 없는 달은 평균소요를 앞 달들의 비율로 나눔</div>
       </div>
       <div class="scroll" id="usageTable"></div>
     </div>
@@ -481,7 +481,8 @@ function renderInventory() {
     <tbody>${I.items.map(rows).join('')}</tbody></table>`;
 
   $('usageTable').innerHTML = table(['품목', '용도', ...M.map(m => esc(m.replace('말', '')))],
-    I.items.flatMap(it => Object.entries(it.usage_demand).map(([u, ds], k) => [k ? '' : `<strong>${esc(it.name)}</strong> <span class="code">${it.code}</span>`, usageBadge(u), ...ds.map(n0)])), [0, 1]);
+    I.items.flatMap(it => it.usage_demand.map((g, k) => [k ? '' : `<strong>${esc(it.name)}</strong> <span class="code">${it.code}</span>`,
+      usageBadge(g.usage) + (g.prefer ? ` <span class="badge b-line">${esc(g.prefer)} 먼저</span>` : ''), ...g.demand.map(n0)])), [0, 1]);
 
   const adj = I.adjustments || [];
   $('adjustNote').hidden = !adj.length;

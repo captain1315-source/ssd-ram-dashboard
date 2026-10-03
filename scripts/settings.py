@@ -43,9 +43,17 @@ def load_settings(path):
             "as_of": _date(as_of),
         })
 
+    # 모델 코드에 특정 글자가 들어 있으면 그 제조사 재고를 먼저 쓴다 (예: TOPAZ → Crucial)
+    model_maker = []
+    if "모델제조사" in wb.sheetnames:
+        for r in _rows(wb["모델제조사"]):
+            if r[0] and r[1]:
+                model_maker.append({"match": str(r[0]), "maker": r[1], "code": (r[2] if len(r) > 2 else None) or None})
+
     return {
         "items": items,
         "makers": makers,
+        "model_maker": model_maker,
         "model_usage": {str(r[0]): r[1] for r in _rows(wb["모델용도"]) if r[0] and r[1] in ("국내", "해외")},
         # (거래처, 품목코드) → 제조사. 품목코드가 비어 있으면 그 거래처의 전체 품목에 적용
         "vendor_maker": {(r[0], (r[3] if len(r) > 3 else None) or None): r[1]

@@ -49,24 +49,34 @@ def model_token(code):
     return m.group(0) if m else "(표기 없음)"
 
 
-def usage_sums(by_model, model_usage):
-    """{모델코드: 수량} → ({용도: 수량}, {설정에 없는 표기: 수량})"""
-    sums, unknown = {}, {}
+def group_demand(by_model, model_usage, prefer):
+    """{모델코드: 수량} → ({(용도, 우선 제조사): 수량}, {설정에 없는 표기: 수량})
+
+    prefer(모델코드)는 그 모델이 먼저 써야 하는 제조사 이름, 없으면 None.
+    """
+    groups, unknown = {}, {}
     for code, qty in by_model.items():
         token = model_token(code)
         usage = model_usage.get(token)
         if usage is None:
             usage = UNKNOWN
             unknown[token] = unknown.get(token, 0) + qty
-        sums[usage] = sums.get(usage, 0) + qty
-    return sums, unknown
+        key = (usage, prefer(code))
+        groups[key] = groups.get(key, 0) + qty
+    return groups, unknown
 
 
-def split_demand(target, raw, fallback):
-    """월 소요 합계(target)를 용도별 비율로 나눈다.
+def usage_sums(by_model, model_usage):
+    """{모델코드: 수량} → ({용도: 수량}, {설정에 없는 표기: 수량})"""
+    groups, unknown = group_demand(by_model, model_usage, lambda code: None)
+    return {usage: qty for (usage, _), qty in groups.items()}, unknown
 
-    raw는 그 달의 모델별 소요를 용도로 묶은 값. 합이 0이면(모델별 자료가 없는 달)
-    fallback 비율을 쓰고, 그것도 없으면 전부 미분류로 둔다.
+
+def split_demand(target, raw, fallback, unknown_key=UNKNOWN):
+    """월 소요 합계(target)를 묶음별 비율로 나눈다.
+
+    raw는 그 달의 모델별 소요를 용도(또는 용도·우선 제조사)로 묶은 값. 합이 0이면
+    (모델별 자료가 없는 달) fallback 비율을 쓰고, 그것도 없으면 전부 미분류로 둔다.
     """
     if not target:
         return {}
@@ -75,14 +85,24 @@ def split_demand(target, raw, fallback):
         share = {u: v for u, v in fallback.items() if v > 0}
     total = sum(share.values())
     if not total:
-        return {UNKNOWN: target}
+        return {unknown_key: target}
     return {u: target * v / total for u, v in share.items()}
 
 
-def consume(lots, usage, qty):
-    """용도에 맞는 재고에서 qty만큼 차감한다. 모자라면 그 용도의 마지막 재고에 음수로 남긴다."""
+def consume(lots, usage, qty, prefer=None):
+    """용도에 맞는 재고에서 qty만큼 차감한다. 모자라면 그 용도의 마지막 재고에 음수로 남긴다.
+
+    prefer(우선 제조사)가 있으면 그 재고를 먼저 쓰고, 남는 소요는 용도 규칙대로 뺀다.
+    """
     if qty <= 0 or not lots:
         return
+    first = next((l for l in lots if l["maker"] == prefer), None) if prefer else None
+    if first:
+        take = min(max(first["stock"], 0), qty)
+        first["stock"] -= take
+        qty -= take
+        if qty <= 1e-9:
+            return
     if usage == UNKNOWN:
         dedicated, eligible = [], lots
     else:
@@ -100,7 +120,7 @@ def project(lots, steps):
     """제조사별 월말 재고 전망.
 
     lots:  [{'maker', 'usage', 'stock'}] — 시작 재고, 적힌 순서가 소진 순서
-    steps: 월별 [{'inflow': {제조사: 수량}, 'demand': {용도: 수량}}]
+    steps: 월별 [{'inflow': {제조사: 수량}, 'demand': {용도 또는 (용도, 우선 제조사): 수량}}]
     돌려주는 값은 lots와 같은 순서의 월말 재고 목록.
     """
     state = [dict(l) for l in lots]
@@ -108,8 +128,12 @@ def project(lots, steps):
     for step in steps:
         for lot in state:
             lot["stock"] += step["inflow"].get(lot["maker"], 0)
+        groups = [((k if isinstance(k, tuple) else (k, None)), qty) for k, qty in step["demand"].items()]
         for usage in USAGE_ORDER:
-            consume(state, usage, step["demand"].get(usage, 0))
+            # 우선 제조사가 정해진 소요를 먼저 뺀다
+            for (u, prefer), qty in sorted(groups, key=lambda g: g[0][1] is None):
+                if u == usage:
+                    consume(state, usage, qty, prefer)
         for i, lot in enumerate(state):
             ends[i].append(lot["stock"])
     return ends

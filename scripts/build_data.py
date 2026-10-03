@@ -153,20 +153,28 @@ def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, netted, sop, is
         "end": [r2(v) for v in inv.total_ends(m["carry_stock"], m["receipt_qty"], backlog, demand, inflow)],
     }
 
-    # ---- 용도별 소요: 당월은 생산계획, M+1~M+5는 S&OP의 모델별 소요로 비율을 구해 합계에 적용
+    # ---- 모델별 우선 제조사: 설정의 '모델제조사' 규칙 중 이 품목에 등록된 제조사만 적용
+    makers = cfg["makers"].get(code, [])
+    registered = {rc.norm_maker(mk["maker"]): mk["maker"] for mk in makers}
+    rules = [(r["match"].lower(), registered[rc.norm_maker(r["maker"])]) for r in cfg["model_maker"]
+             if r["code"] in (None, code) and rc.norm_maker(r["maker"]) in registered]
+    prefer = lambda model: next((mk for text, mk in rules if text in (model or "").lower()), None)
+    unknown_key = (inv.UNKNOWN, None)
+
+    # ---- 소요 묶음(용도, 우선 제조사): 당월은 생산계획, M+1~M+5는 S&OP의 모델별 소요로 비율을 구해 합계에 적용
     raw, unknown = [], defaultdict(float)
     by_month = [scm.plan_demand_by_model(con, base, [code])[code]]
     by_month += [{model: ds[k] for model, ds in sop[code].items() if ds[k]} for k in range(5)]
     for models in by_month:
-        s, u = inv.usage_sums(models, cfg["model_usage"])
+        s, u = inv.group_demand(models, cfg["model_usage"], prefer)
         raw.append(s)
         for token, qty in u.items():
             unknown[token] += qty
     fallback = defaultdict(float)
     for s in raw:
-        for usage, qty in s.items():
-            fallback[usage] += max(qty, 0)
-    usage_demand = [inv.split_demand(demand[k], raw[k], fallback) for k in range(6)]
+        for key, qty in s.items():
+            fallback[key] += max(qty, 0)
+    usage_demand = [inv.split_demand(demand[k], raw[k], fallback, unknown_key) for k in range(6)]
     if unknown:
         issues.append({"code": code, "msg":
                        "국내용인지 해외용인지 정해지지 않은 소요가 있습니다: "
@@ -174,7 +182,6 @@ def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, netted, sop, is
                        + ". 설정의 '모델용도' 시트에 이 코드를 추가하고 국내/해외를 적어 주세요"})
 
     # ---- 제조사별 시작 재고: 설정의 기초수량에서 출발해 기준월 월초까지 이월
-    makers = cfg["makers"].get(code, [])
     as_of = max((mk["as_of"] for mk in makers if mk["as_of"]), default=None)
     if not makers or as_of is None or any(mk["qty"] is None for mk in makers):
         issues.append({"code": code, "msg": "설정의 '제조사' 시트에 기초수량과 기준일이 없어 제조사 구분 없이 표시합니다"})
@@ -196,9 +203,9 @@ def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, netted, sop, is
         if past is None:
             issues.append({"code": code, "msg": f"{month[:7]} MRP 결과가 없어 그 달의 소진을 반영하지 못했습니다"})
         else:
-            s, _ = inv.usage_sums(scm.plan_demand_by_model(con, month, [code])[code], cfg["model_usage"])
+            s, _ = inv.group_demand(scm.plan_demand_by_model(con, month, [code])[code], cfg["model_usage"], prefer)
             step = {"inflow": received_in(month),
-                    "demand": inv.split_demand(past["month_demand"] + past["extra_demand"], s, fallback)}
+                    "demand": inv.split_demand(past["month_demand"] + past["extra_demand"], s, fallback, unknown_key)}
             for lot, ends in zip(lots, inv.project(lots, [step])):
                 lot["stock"] = ends[0]
         month = scm.month_add(month, 1)
@@ -247,8 +254,10 @@ def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, netted, sop, is
         "code": code, "name": item["name"], "cat": item["cat"],
         "grade": grade, "short_idx": short_idx, "short_lot": short_lot,
         "total": total, "lots": out_lots,
-        "usage_demand": {u: [r2(d.get(u, 0)) for d in usage_demand]
-                         for u in inv.USAGE_ORDER if any(d.get(u) for d in usage_demand)},
+        # 용도별 월 소요. prefer가 있으면 그 제조사 재고를 먼저 쓰는 소요
+        "usage_demand": [{"usage": u, "prefer": p, "demand": [r2(d.get((u, p), 0)) for d in usage_demand]}
+                         for u, p in sorted({k for d in usage_demand for k in d},
+                                            key=lambda k: (inv.USAGE_ORDER.index(k[0]), k[1] is not None, k[1] or ""))],
         "single_source": len([l for l in out_lots if l["maker"] != inv.UNASSIGNED]) == 1,
     }
 
