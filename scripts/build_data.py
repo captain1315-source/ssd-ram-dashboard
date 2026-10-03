@@ -1,19 +1,17 @@
 """
-원본 엑셀 → data/dashboard.json 변환 스크립트
+원본 자료 → data/dashboard.json 변환 스크립트
 사용법:
   python scripts/build_data.py
 
-입력 (원본/):
-  Contract, Spot Price.xlsx          시세 (Spot Price / Contract Price 시트)
-  주간업데이트_입력템플릿*.xlsx      재고현황 / 월별과부족 / 단가현황(참고) / 입고이력 (가장 최근 저장본)
-  market.json                        시장 동향 (주간 루틴이 작성, 없으면 생략)
-
-숫자는 엑셀 값을 그대로 옮기고, 재고는 운영지침 STEP 1.5 정합성 검사를 통과한 경우에만
-확정본(confirmed)으로 승격한다. 실패하면 직전 확정본을 유지하고 최신 입력본은 pending으로 둔다.
+자료 출처
+  시세            원본/Contract, Spot Price.xlsx (매일 루틴이 추가)
+  재고·과부족     MRP 앱 DB (scm.py, 읽기 전용) + 원본/설정.xlsx (제조사·용도·기초수량)
+  입고이력        원본/입고이력.csv (MRP 앱 DB의 새 입고를 실행할 때마다 누적, 원본/입력/의 ERP 파일도 흡수)
+  견적 단가       원본/단가현황.xlsx
+  시장 동향       원본/market.json (주간 루틴이 작성)
 """
 
 import json
-import re
 import sys
 import warnings
 from collections import defaultdict
@@ -22,17 +20,21 @@ from pathlib import Path
 
 import openpyxl
 
+import inventory as inv
+import receipts as rc
+import scm
+from settings import load_settings
 from update_prices import fix_and_load_xlsx
 
 ROOT = Path(__file__).resolve().parent.parent
 SRC = ROOT / "원본"
 OUT = ROOT / "data" / "dashboard.json"
 PRICE_XLSX = SRC / "Contract, Spot Price.xlsx"
+SETTINGS_XLSX = SRC / "설정.xlsx"
+QUOTES_XLSX = SRC / "단가현황.xlsx"
+RECEIPTS_CSV = SRC / "입고이력.csv"
+INBOX = SRC / "입력"
 MARKET_JSON = SRC / "market.json"
-TEMPLATE_GLOB = "주간업데이트_입력템플릿*.xlsx"
-
-# 운영지침 "관리 품목 (5종 고정)"
-MANAGED = ["JK50-10024A", "JK50-10022A", "JK50-10033A", "JK51-10012A", "JK51-10012B"]
 
 SPOT_ITEMS = {
     "DDR4 8Gb (1Gx8) 3200": "ddr4_spot",
@@ -43,13 +45,8 @@ CONTRACT_ITEMS = {
     "DDR4 8GB SO-DIMM": "ddr4_contract",
     "DDR5 16GB Module": "ddr5_contract",
 }
-
-TOL = 0.5          # 수량 비교 허용 오차 (소요 소수점 반올림)
-PRICE_GAP = 1.5    # 최종입고단가 vs 재고단가 괴리 표기 기준 (STEP 1.5-5)
-
-
-def num(v):
-    return v if isinstance(v, (int, float)) and not isinstance(v, bool) else 0
+TOL = 0.5          # 수량 비교 허용 오차
+STALE_DAYS = 4     # MRP 계산이 이보다 오래되면 경고
 
 
 def r2(v):
@@ -67,8 +64,9 @@ def iso(d):
     return d.strftime("%Y-%m-%d")
 
 
-def header(row):
-    return [str(c).strip() if c is not None else "" for c in row]
+def short_vendor(name):
+    """'S18167_보이스아이주식회사' → '보이스아이주식회사'"""
+    return name.split("_", 1)[1] if name and "_" in name else (name or "")
 
 
 # ---------------------------------------------------------------- 시세
@@ -98,304 +96,272 @@ def read_prices(path):
     return {key: [rows[d] for d in sorted(rows)] for key, rows in out.items()}
 
 
-# ---------------------------------------------------------------- 재고
+# ---------------------------------------------------------------- 입고이력 누적
 
-def parse_stock(ws):
-    """재고현황 시트 → [{code, name, cat, as_of, by_supplier, total}]"""
-    rows = list(ws.iter_rows(values_only=True))
-    head = header(rows[0])
-    i_code, i_name, i_cat, i_date = (head.index(h) for h in ("품목코드", "품목명", "구분", "기준일자"))
-    i_total = next(i for i, h in enumerate(head) if h.startswith("재고 합계"))
-    suppliers = head[i_date + 1:i_total]
-    out = []
-    for r in rows[1:]:
-        if not r[i_code]:
-            break
-        out.append({
-            "code": r[i_code], "name": r[i_name], "cat": r[i_cat],
-            "as_of": iso(r[i_date]) if isinstance(r[i_date], datetime) else None,
-            "by_supplier": {s: r2(num(r[i_date + 1 + k])) for k, s in enumerate(suppliers)},
-            "total": r2(num(r[i_total])),
-        })
-    return suppliers, out
-
-
-def parse_balance(ws):
-    """월별과부족 시트 → (월 라벨, [{code, name, cat, lots: [...]}])
-
-    같은 품목코드가 여러 행이면 매입 로트 분할(일반 / 커널앤코어)로 본다.
-    """
-    rows = list(ws.iter_rows(values_only=True))
-    head = header(rows[0])
-    i_code, i_cat, i_name, i_note = (head.index(h) for h in ("품목코드", "구분", "품목명", "비고"))
-    i_open = next(i for i, h in enumerate(head) if re.fullmatch(r"\d+월기초", h))
-    i_in = next(i for i, h in enumerate(head) if h.startswith("입고"))
-    i_last = head.index("최종입고단가")
-    i_stockp = head.index("재고단가")
-    demand_cols = [i for i, h in enumerate(head) if re.fullmatch(r"\d+월소요", h)]
-    end_cols = [i for i, h in enumerate(head) if re.fullmatch(r"\d+월말재고", h)]
-    months = [head[i].replace("재고", "") for i in end_cols]
-
-    items = {}
-    for r in rows[1:]:
-        if not r[i_code]:
-            break
-        it = items.setdefault(r[i_code], {"code": r[i_code], "name": r[i_name], "cat": r[i_cat], "lots": []})
-        it["lots"].append({
-            "label": r[i_note],
-            "open": r2(num(r[i_open])), "incoming": r2(num(r[i_in])),
-            "last_price": r2(r[i_last]) if isinstance(r[i_last], (int, float)) else None,
-            "stock_price": r2(r[i_stockp]) if isinstance(r[i_stockp], (int, float)) else None,
-            "demand": [r2(num(r[i])) for i in demand_cols],
-            "end": [r2(num(r[i])) for i in end_cols],
-        })
-
-    for it in items.values():
-        if len(it["lots"]) > 1:
-            for l in it["lots"]:
-                l["label"] = l["label"] or "일반"
-            it["note"] = None
-        else:
-            it["note"] = it["lots"][0]["label"]
-            it["lots"][0]["label"] = None
-    return {"open": head[i_open], "ends": months}, list(items.values())
-
-
-def grade(end, demand):
-    """운영지침 STEP 3: 최초 부족(마이너스) 전환 시점으로 등급 판정.
-
-    end/demand는 당월~+5개월 월말재고·월소요. (등급, 최초 부족 월 인덱스)를 돌려준다.
-    """
-    neg = next((k for k, v in enumerate(end) if v < 0), None)
-    if neg is not None:
-        if neg <= 2:
-            return "critical", neg   # 3개월 이내
-        if neg <= 4:
-            return "serious", neg    # 4~5개월
-        return "warning", neg        # 6개월
-    if end and demand and end[-1] < demand[-1]:
-        return "warning", None       # 표 범위 밖 다음 달에 부족 전환
-    return "good", None
-
-
-def issue(level, code, check, msg):
-    return {"level": level, "code": code, "check": check, "msg": msg}
-
-
-def check_stock_row(row):
-    """STEP 1.5-1: 재고현황 합계 = 공급사별 수량 합"""
-    ssum = sum(row["by_supplier"].values())
-    if abs(ssum - row["total"]) > TOL:
-        return [issue("error", row["code"], "stock_sum",
-                      f"재고현황 합계 {comma(row['total'])} ≠ 공급사별 합 {comma(ssum)}")]
-    return []
-
-
-def check_item(it, stock_row):
-    """STEP 1.5-2~5. (재고현황이 맞춘 기준, 이슈 목록)을 돌려준다."""
-    issues = []
-    code = it["code"]
-
-    # 3. 체인: 기초 + 입고대기 − 소요 = 월말재고
-    for l in it["lots"]:
-        prev = l["open"] + l["incoming"]
-        for k, (d, e) in enumerate(zip(l["demand"], l["end"])):
-            if abs(prev - d - e) > TOL:
-                lot = f" ({l['label']})" if l["label"] else ""
-                issues.append(issue("error", code, "chain",
-                                    f"월별과부족{lot} {k + 1}번째 달: {comma(prev)} − 소요 {comma(d)} ≠ 월말 {comma(e)}"))
-                break
-            prev = e
-
-    # 2·4. 재고현황 합계가 월별과부족의 어느 기준과 맞는지 (로트 분할 품목은 합계 기준)
-    basis = None
-    if stock_row is not None:
-        open_sum = sum(l["open"] for l in it["lots"])
-        in_sum = sum(l["incoming"] for l in it["lots"])
-        first_end = sum(l["end"][0] for l in it["lots"]) if it["lots"][0]["end"] else None
-        total = stock_row["total"]
-        if first_end is not None and abs(total - first_end) <= TOL:
-            basis = "first_end"
-        elif abs(total - open_sum) <= TOL:
-            basis = "open"
-        elif in_sum and abs(total - open_sum - in_sum) <= TOL:
-            basis = "open_plus_incoming"
-        else:
-            issues.append(issue("error", code, "stock_vs_balance",
-                                f"재고현황 합계 {comma(total)} ≠ 월별과부족 첫 월말 {comma(first_end)} / 기초 {comma(open_sum)}"))
-
-    # 5. 최종입고단가 vs 재고단가 괴리 (표기만, 보류 사유 아님)
-    for l in it["lots"]:
-        a, b = l["last_price"], l["stock_price"]
-        if a and b and max(a, b) / min(a, b) >= PRICE_GAP:
-            issues.append(issue("warn", code, "price_gap",
-                                f"최종입고단가 {comma(a)} vs 재고단가 {comma(b)} ({max(a, b) / min(a, b):.1f}배)"))
-    return basis, issues
-
-
-BASIS_LABEL = {"first_end": "첫 월말", "open": "기초", "open_plus_incoming": "기초+입고대기"}
-
-
-def build_snapshot(path):
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore")   # 범위를 벗어난 날짜 셀 경고
-        wb = openpyxl.load_workbook(path, data_only=True)
-
-    suppliers, stock = parse_stock(wb["재고현황"])
-    months, items = parse_balance(wb["월별과부족"])
-    stock_by_code = {s["code"]: s for s in stock}
-
-    issues = []
-    bases = {}
-    for s in stock:
-        issues += check_stock_row(s)
-
-    for it in items:
-        it["managed"] = it["code"] in MANAGED
-        s = stock_by_code.get(it["code"])
-        basis, found = check_item(it, s)
-        if it["managed"]:
-            issues += found
-            if basis:
-                bases[it["code"]] = basis
-        it["total"] = {
-            "open": r2(sum(l["open"] for l in it["lots"])),
-            "incoming": r2(sum(l["incoming"] for l in it["lots"])),
-            "demand": [r2(sum(v)) for v in zip(*(l["demand"] for l in it["lots"]))],
-            "end": [r2(sum(v)) for v in zip(*(l["end"] for l in it["lots"]))],
-        }
-        it["grade"], it["short_idx"] = grade(it["total"]["end"], it["total"]["demand"])
-        if s:
-            it["name"] = s["name"]
-            it["by_supplier"] = s["by_supplier"]
-            it["stock_total"] = s["total"]
-            it["single_source"] = sum(1 for v in s["by_supplier"].values() if v > 0) == 1
-
-    # 2. 관리 품목이 모두 같은 기준이어야 한다
-    if len(set(bases.values())) > 1:
-        detail = ", ".join(f"{c} {BASIS_LABEL[b]}" for c, b in bases.items())
-        issues.append(issue("error", None, "mixed_basis", f"재고현황 기준 혼재: {detail}"))
-
-    for code in MANAGED:
-        if code not in stock_by_code:
-            issues.append(issue("error", code, "missing", "재고현황 시트에 없음"))
-        if code not in {it["code"] for it in items}:
-            issues.append(issue("error", code, "missing", "월별과부족 시트에 없음"))
-
-    as_of = max((s["as_of"] for s in stock if s["as_of"]), default=None)
-    first = re.match(r"(\d+)월", months["ends"][0]) if months["ends"] else None
-    if as_of and first and int(first.group(1)) != int(as_of[5:7]):
-        issues.append(issue("warn", None, "month_label",
-                            f"기준일자는 {int(as_of[5:7])}월인데 월별과부족 첫 열은 {months['ends'][0]}입니다. 월 표기를 확인해 주세요"))
-
-    order = {c: i for i, c in enumerate(MANAGED)}
-    items.sort(key=lambda it: (not it["managed"], order.get(it["code"], 99)))
-    snapshot = {
-        "as_of": as_of,
-        "source": path.name,
-        "saved": datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m-%d %H:%M"),
-        "suppliers": suppliers,
-        "months": months,
-        "items": items,
-        "validation": {"ok": not any(i["level"] == "error" for i in issues), "issues": issues},
-    }
-    return wb, snapshot
-
-
-def merge_snapshot(new, prev):
-    """검사를 통과한 입력본만 확정본으로 승격한다."""
-    if new["validation"]["ok"]:
-        return {"confirmed": new, "pending": None}
-    return {"confirmed": (prev or {}).get("confirmed"), "pending": new}
-
-
-# ---------------------------------------------------------------- 입고단가
-
-def day(d):
-    return iso(d) if isinstance(d, datetime) else d
-
-
-def unit_price(qty, amt, price):
-    """입고이력의 단가 열을 우선하고, 비어 있으면 금액 ÷ 수량"""
-    return price if isinstance(price, (int, float)) and price else amt / qty
-
-
-def monthly_receipts(rows, codes):
-    """(입고일, 품번, 통화, 수량, 금액, 단가) → 품번별 월 가중평균 USD 단가"""
-    acc = defaultdict(lambda: [0, 0])
-    for d, code, cur, qty, amt, price in rows:
-        if code not in codes or cur != "USD" or not qty or not amt:
+def update_receipts(con, codes):
+    """MRP 앱 DB와 입력 폴더의 새 입고를 누적 파일에 더하고 전체 목록을 돌려준다."""
+    stored = rc.load(RECEIPTS_CSV)
+    added = rc.merge(stored, rc.from_scm(scm.receipts(con, codes)))
+    for path in sorted(INBOX.glob("*.xlsx")) if INBOX.exists() else []:
+        if path.name.startswith("~$"):
             continue
-        acc[(code, day(d)[:7])][0] += unit_price(qty, amt, price) * qty
-        acc[(code, day(d)[:7])][1] += qty
-    out = {c: [] for c in codes}
-    for (code, m), (amt, qty) in sorted(acc.items()):
-        out[code].append({"m": m, "price": round(amt / qty, 2), "qty": r2(qty)})
-    return out
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            wb = openpyxl.load_workbook(path, data_only=True, read_only=True)
+        for ws in wb.worksheets:
+            added += rc.merge(stored, rc.from_sheet(ws))
+    if added:
+        rc.save(RECEIPTS_CSV, stored)
+    return stored, added
 
 
-def check_receipts(rows, codes):
-    """수량 × 단가가 금액과 1% 넘게 어긋나는 입고 행"""
+# ---------------------------------------------------------------- 재고·과부족
+
+def by_maker(rows, cfg, code):
+    """[(거래처, 수량, 입고번호, 비고)] → {제조사: 수량}. 제조사를 알 수 없으면 '미지정'."""
+    out = defaultdict(float)
+    for vendor, qty, no, note in rows:
+        out[rc.resolve_maker(code, vendor, cfg, no, note) or inv.UNASSIGNED] += qty
+    return dict(out)
+
+
+def top_up(parts, total):
+    """제조사별 합이 시스템 합계보다 적으면 차이를 '미지정'에 넣는다 (적송·기타입고 등 건별 자료가 없는 수량)."""
+    gap = total - sum(parts.values())
+    if gap > TOL:
+        parts[inv.UNASSIGNED] = parts.get(inv.UNASSIGNED, 0) + gap
+    return parts
+
+
+def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, sop, issues):
+    code = item["code"]
+    m = mrp_now.get(code)
+    if m is None:
+        issues.append({"code": code, "msg": "MRP 앱에 이 품목의 계산 결과가 없습니다"})
+        return None
+    months = [scm.month_add(base, k) for k in range(7)]          # months[k] = M+k의 1일
+
+    # ---- 품목 합계: MRP 앱 수치 그대로
+    demand = [m["month_demand"] + m["extra_demand"]] + [m[f"w{4 * k}_demand"] for k in range(1, 6)]
+    inflow = [0] + [m[f"m{k}_in"] for k in range(1, 6)]
+    total = {
+        "open": r2(m["carry_stock"]), "received": r2(m["receipt_qty"]), "pending": r2(m["po_backlog"]),
+        "demand": [r2(v) for v in demand],
+        "end": [r2(v) for v in inv.total_ends(m["carry_stock"], m["receipt_qty"], m["po_backlog"], demand, inflow)],
+    }
+
+    # ---- 용도별 소요: 당월은 생산계획, M+1~M+5는 S&OP의 모델별 소요로 비율을 구해 합계에 적용
+    raw, unknown = [], set()
+    plan, u = inv.usage_sums(scm.plan_demand_by_model(con, base, [code])[code], cfg["model_usage"])
+    raw.append(plan)
+    unknown |= u
+    for k in range(5):
+        s, u = inv.usage_sums({model: ds[k] for model, ds in sop[code].items() if ds[k]}, cfg["model_usage"])
+        raw.append(s)
+        unknown |= u
+    fallback = defaultdict(float)
+    for s in raw:
+        for usage, qty in s.items():
+            fallback[usage] += max(qty, 0)
+    usage_demand = [inv.split_demand(demand[k], raw[k], fallback) for k in range(6)]
+    if unknown:
+        issues.append({"code": code, "msg": "용도 미분류 모델 표기: " + ", ".join(sorted(unknown))
+                       + " (설정의 '모델용도' 시트에 추가해 주세요)"})
+
+    # ---- 제조사별 시작 재고: 설정의 기초수량에서 출발해 기준월 월초까지 이월
+    makers = cfg["makers"].get(code, [])
+    as_of = max((mk["as_of"] for mk in makers if mk["as_of"]), default=None)
+    if not makers or as_of is None or any(mk["qty"] is None for mk in makers):
+        issues.append({"code": code, "msg": "설정의 '제조사' 시트에 기초수량과 기준일이 없어 제조사 구분 없이 표시합니다"})
+        lots, as_of = [{"maker": inv.UNASSIGNED, "usage": "공용", "stock": m["carry_stock"]}], base
+    else:
+        lots = [{"maker": mk["maker"], "usage": mk["usage"], "stock": mk["qty"]} for mk in makers]
+        if as_of[8:10] != "01":
+            issues.append({"code": code, "msg": f"기초수량 기준일 {as_of}이 1일이 아니어서 그 달 월초 재고로 간주했습니다"})
+        if as_of[:7] > base[:7]:
+            issues.append({"code": code, "msg": f"기초수량 기준일 {as_of}이 MRP 기준월({base[:7]})보다 뒤입니다"})
+
+    mine = [r for r in all_receipts if r["품번"] == code and r["입고일"] >= as_of]
+    received_in = lambda month: by_maker(
+        [(r["거래처"], r["수량"], r["입고번호"], r["비고"]) for r in mine if r["입고일"][:7] == month[:7]], cfg, code)
+
+    month = as_of[:7] + "-01"
+    while month < base:                                           # 기준일이 지난 달이면 그 사이를 이월
+        past = scm.mrp(con, month, [code]).get(code)
+        if past is None:
+            issues.append({"code": code, "msg": f"{month[:7]} MRP 결과가 없어 그 달의 소진을 반영하지 못했습니다"})
+        else:
+            s, _ = inv.usage_sums(scm.plan_demand_by_model(con, month, [code])[code], cfg["model_usage"])
+            step = {"inflow": received_in(month),
+                    "demand": inv.split_demand(past["month_demand"] + past["extra_demand"], s, fallback)}
+            for lot, ends in zip(lots, inv.project(lots, [step])):
+                lot["stock"] = ends[0]
+        month = scm.month_add(month, 1)
+
+    gap = sum(l["stock"] for l in lots) - m["carry_stock"]
+    if abs(gap) > TOL:
+        issues.append({"code": code, "msg": f"제조사별 재고 합계가 시스템 월초재고 {comma(m['carry_stock'])}와 "
+                                            f"{comma(gap)} 차이 납니다. 설정의 기초수량을 새로 적어 주세요"})
+
+    # ---- 제조사별 입고: 당월 입고(실적), 입고대기(당월 납기 발주잔량), M+1~M+5 발주
+    received = top_up(received_in(base), m["receipt_qty"])
+    my_pos = [p for p in pos if p["item_code"] == code]
+    po_in = lambda k, qty: by_maker([(p["vendor_name"], qty(p), None, None) for p in my_pos
+                                     if months[k] <= p["due"] < months[k + 1] and qty(p) > 0], cfg, code)
+    pending = top_up(po_in(0, lambda p: p["order_qty"] - p["received_qty"]), m["po_backlog"])
+    future = [top_up(po_in(k, lambda p: p["order_qty"]), m[f"m{k}_in"]) for k in range(1, 6)]
+
+    known = {l["maker"] for l in lots}
+    for name in sorted({mk for part in [received, pending, *future] for mk in part} - known):
+        lots.append({"maker": name, "usage": "공용", "stock": 0})   # 미지정 입고는 공용으로 본다
+
+    merged0 = defaultdict(float)
+    for part in (received, pending):
+        for name, qty in part.items():
+            merged0[name] += qty
+    steps = [{"inflow": dict(merged0) if k == 0 else future[k - 1], "demand": usage_demand[k]} for k in range(6)]
+    ends = inv.project(lots, steps)
+
+    out_lots = []
+    for lot, end in zip(lots, ends):
+        g, idx = inv.grade(end, None)
+        out_lots.append({"maker": lot["maker"], "usage": lot["usage"], "open": r2(lot["stock"]),
+                         "received": r2(received.get(lot["maker"], 0)), "pending": r2(pending.get(lot["maker"], 0)),
+                         "end": [r2(v) for v in end], "grade": g, "short_idx": idx})
+
+    # ---- 등급: 합계와 제조사 행 중 가장 나쁜 쪽. 용도가 다른 재고는 서로 대신 쓸 수 없다
+    g_total, idx_total = inv.grade(total["end"], total["demand"])
+    grade = inv.worst([g_total] + [l["grade"] for l in out_lots])
+    short = next((l for l in out_lots if l["grade"] == grade and l["short_idx"] is not None), None)
+    if g_total == grade and (idx_total is not None or short is None):
+        short_idx, short_lot = idx_total, None
+    else:
+        short_idx, short_lot = short["short_idx"], {"maker": short["maker"], "usage": short["usage"]}
+
+    return {
+        "code": code, "name": item["name"], "cat": item["cat"],
+        "grade": grade, "short_idx": short_idx, "short_lot": short_lot,
+        "total": total, "lots": out_lots,
+        "usage_demand": {u: [r2(d.get(u, 0)) for d in usage_demand]
+                         for u in inv.USAGE_ORDER if any(d.get(u) for d in usage_demand)},
+        "single_source": len([l for l in out_lots if l["maker"] != inv.UNASSIGNED]) == 1,
+    }
+
+
+def build_inventory(con, cfg, all_receipts, issues):
+    codes = [it["code"] for it in cfg["items"]]
+    base = scm.base_month(con)
+    mrp_now = scm.mrp(con, base, codes)
+    pos = scm.purchase_orders(con, codes)
+    sop = scm.sop_by_model(con, codes)
+    items = [it for it in (build_item(it, cfg, con, base, mrp_now, all_receipts, pos, sop, issues)
+                           for it in cfg["items"]) if it]
+
+    computed = max((r["computed_at"] for r in mrp_now.values()), default="")[:16]
+    uploads = scm.upload_times(con)
+    if computed and (datetime.now() - datetime.fromisoformat(computed)).days > STALE_DAYS:
+        issues.append({"code": None, "msg": f"MRP 앱의 마지막 계산이 {computed}입니다. 최신 자료가 올라갔는지 확인해 주세요"})
+
+    # 발주 자료가 입고 자료보다 먼저 올라갔으면, 이미 들어온 물량이 입고대기에도 남아 있을 수 있다
+    if uploads.get("발주_RAW", "") < uploads.get("입고_RAW", ""):
+        for it in items:
+            if it["total"]["received"] and it["total"]["pending"]:
+                issues.append({"code": it["code"], "msg":
+                               f"당월 입고 {comma(it['total']['received'])}개와 입고대기 {comma(it['total']['pending'])}개가 "
+                               f"함께 잡혀 있습니다. 발주 자료({uploads['발주_RAW']})가 입고 자료({uploads['입고_RAW']})보다 "
+                               f"먼저 올라가 같은 물량이 두 번 계산됐을 수 있습니다"})
+
+    months = [scm.month_add(base, k) for k in range(7)]
+    open_pos = sorted(
+        ({"code": p["item_code"], "due": p["due"], "vendor": short_vendor(p["vendor_name"]),
+          "maker": rc.resolve_maker(p["item_code"], p["vendor_name"], cfg) or inv.UNASSIGNED,
+          "qty": r2(p["order_qty"] - p["received_qty"]), "price": r2(p["unit_price"]), "currency": p["currency"]}
+         for p in pos if p["order_qty"] - p["received_qty"] > 0 and months[0] <= p["due"] < months[6]),
+        key=lambda p: (p["due"], p["code"]))
+
+    return {
+        "base_month": base[:7],
+        "as_of": computed[:10], "computed_at": computed,
+        "uploads": {k: uploads[k] for k in ("기초재고", "입고_RAW", "발주_RAW") if k in uploads},
+        "months": [f"{int(months[k][5:7])}월말" for k in range(6)],
+        "items": items,
+        "pos": open_pos,
+        "issues": issues,
+    }
+
+
+# ---------------------------------------------------------------- 입고단가·견적
+
+def read_quotes(path):
+    """단가현황 목록(날짜·제조사·구분·스펙·단가) → 제조사 × 월 표. 같은 달에는 가장 늦은 날짜의 단가."""
+    ws = openpyxl.load_workbook(path, data_only=True)["단가현황"]
+    last, names = {}, {}
+    rows = [r for r in ws.iter_rows(min_row=2, values_only=True) if isinstance(r[0], datetime)]
+    for d, maker, cat, spec, price, *_ in sorted(rows, key=lambda r: r[0]):
+        if isinstance(price, (int, float)) and maker and spec:
+            k = (cat, spec, rc.norm_maker(maker))
+            names.setdefault(k, maker)
+            last[(k, d.strftime("%Y-%m"))] = price
+    months = sorted({m for _, m in last})
+    return {"months": months,
+            "rows": [{"cat": k[0], "spec": k[1], "maker": names[k], "p": [r2(last.get((k, m))) for m in months]}
+                     for k in sorted(names)]}
+
+
+def build_purchase(all_receipts, cfg, codes):
+    slim = [(r["입고일"], r["품번"], r["통화"], r["수량"], r["금액"], r["단가"]) for r in all_receipts]
+    usd = [r for r in all_receipts if r["품번"] in codes and r["통화"] == "USD" and r["수량"] and r["금액"]]
+    recent = [{"d": r["입고일"], "code": r["품번"], "qty": r2(r["수량"]),
+               "price": round(rc.unit_price(r["수량"], r["금액"], r["단가"]), 2),
+               "maker": rc.resolve_maker(r["품번"], r["거래처"], cfg, r["입고번호"], r["비고"]),
+               # 기초수량 기준일 이후 입고만 제조사 지정이 필요하다 (그 전 입고는 기초수량에 이미 포함)
+               "needs_maker": r["입고일"] >= baseline(cfg, r["품번"]),
+               "vendor": short_vendor(r["거래처"]), "no": r["입고번호"]}
+              for r in sorted(usd, key=lambda r: r["입고일"])[-10:]][::-1]
+    issues = [{"code": code, "msg": f"입고이력 {d}: 수량 {comma(qty)} × 단가 {comma(price)} ≠ 금액 {comma(amt)}"}
+              for d, code, qty, price, amt in rc.amount_mismatches(slim, codes)]
+    return {"receipts": rc.monthly_receipts(slim, codes), "recent": recent,
+            "quotes": read_quotes(QUOTES_XLSX), "issues": issues}
+
+
+def baseline(cfg, code):
+    """품목의 기초수량 기준일. 없으면 어떤 날짜보다도 뒤로 취급되는 값."""
+    return max((mk["as_of"] for mk in cfg["makers"].get(code, []) if mk["as_of"]), default="9999")
+
+
+def unassigned_receipts(all_receipts, cfg):
+    """기초수량 기준일 이후 입고 중 제조사를 정할 수 없는 건"""
     out = []
-    for d, code, cur, qty, amt, price in rows:
-        if code in codes and cur == "USD" and qty and amt and price and abs(qty * price - amt) > 0.01 * amt:
-            out.append(issue("warn", code, "receipt_amount",
-                             f"입고이력 {day(d)}: 수량 {comma(qty)} × 단가 {comma(price)} ≠ 금액 {comma(amt)}"))
+    for r in all_receipts:
+        if r["입고일"] >= baseline(cfg, r["품번"]) and \
+                not rc.resolve_maker(r["품번"], r["거래처"], cfg, r["입고번호"], r["비고"]):
+            out.append({"code": r["품번"], "msg":
+                        f"제조사 미지정 입고: {r['입고일']} {short_vendor(r['거래처'])} {comma(r['수량'])}개 "
+                        f"(입고번호 {r['입고번호']}). 설정의 '거래처' 시트에 품목별 제조사를 적거나 '입고제조사' 시트에 건별로 적어 주세요"})
     return out
-
-
-def read_purchase(wb):
-    ws = wb["입고이력"]
-    rows = list(ws.iter_rows(values_only=True))
-    head = header(rows[0])
-    i_d, i_code, i_cur, i_qty, i_amt, i_price, i_note = (
-        head.index(h) for h in ("입고일", "품번", "통화", "입고수량", "입고금액", "단가", "비고"))
-    data = [r for r in rows[1:] if isinstance(r[i_d], datetime)]
-    slim = [(r[i_d], r[i_code], r[i_cur], r[i_qty], r[i_amt], r[i_price]) for r in data]
-    receipts = monthly_receipts(slim, MANAGED)
-    recent = [
-        {"d": iso(r[i_d]), "code": r[i_code], "qty": r2(r[i_qty]),
-         "price": round(unit_price(r[i_qty], r[i_amt], r[i_price]), 2), "lot": r[i_note]}
-        for r in sorted(data, key=lambda r: r[i_d])
-        if r[i_code] in MANAGED and r[i_cur] == "USD" and r[i_qty] and r[i_amt]
-    ][-10:]
-
-    # 단가현황(참고): 구분 | 스펙 | 제조사 | 월별 단가...
-    ws = wb["단가현황(참고)"]
-    rows = list(ws.iter_rows(values_only=True))
-    month_cols = [i for i, c in enumerate(rows[0][:rows[0].index(None)]) if isinstance(c, datetime)]
-    quotes = {"months": [rows[0][i].strftime("%Y-%m") for i in month_cols], "rows": []}
-    for r in rows[1:]:
-        if not r[0]:
-            break
-        quotes["rows"].append({"cat": r[0], "spec": r[1], "maker": r[2],
-                               "p": [r2(r[i]) if isinstance(r[i], (int, float)) else None for i in month_cols]})
-    return {"receipts": receipts, "recent": recent[::-1], "quotes": quotes, "issues": check_receipts(slim, MANAGED)}
 
 
 # ---------------------------------------------------------------- main
 
-def latest_template():
-    files = [p for p in SRC.glob(TEMPLATE_GLOB) if not p.name.startswith("~$")]
-    return max(files, key=lambda p: p.stat().st_mtime) if files else None
-
-
 def main():
-    if not PRICE_XLSX.exists():
-        sys.exit(f"시세 파일 없음: {PRICE_XLSX}")
-    template = latest_template()
-    if template is None:
-        sys.exit(f"입력템플릿 없음: {SRC / TEMPLATE_GLOB}")
+    for path in (PRICE_XLSX, SETTINGS_XLSX, QUOTES_XLSX):
+        if not path.exists():
+            sys.exit(f"파일 없음: {path}")
 
-    prev = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
+    cfg, problems = load_settings(SETTINGS_XLSX)
+    codes = [it["code"] for it in cfg["items"]]
+    issues = [{"code": None, "msg": p} for p in problems]
+
+    con = scm.connect()
+    all_receipts, added = update_receipts(con, codes)
+    issues += unassigned_receipts(all_receipts, cfg)
+    inventory = build_inventory(con, cfg, all_receipts, issues)
+    con.close()
 
     prices = read_prices(PRICE_XLSX)
-    wb, snapshot = build_snapshot(template)
-    inventory = merge_snapshot(snapshot, prev.get("inventory"))
     market = json.loads(MARKET_JSON.read_text(encoding="utf-8")) if MARKET_JSON.exists() else None
-
-    purchase = read_purchase(wb)
-    data = {"prices": prices, "inventory": inventory, "purchase": purchase, "market": market}
+    data = {"prices": prices, "inventory": inventory,
+            "purchase": build_purchase(all_receipts, cfg, codes), "market": market}
     text = json.dumps(data, ensure_ascii=False, indent=1)
 
     OUT.parent.mkdir(exist_ok=True)
@@ -403,13 +369,15 @@ def main():
     if changed:
         OUT.write_text(text, encoding="utf-8")
 
-    last = {k: v[-1]["d"] for k, v in prices.items() if v}
-    print(f"시세 기준일: {last}")
-    print(f"재고 입력본: {template.name} (기준일 {snapshot['as_of']})")
-    v = snapshot["validation"]
-    print(f"정합성 검사: {'통과' if v['ok'] else '보류'}")
-    for i in v["issues"] + purchase["issues"]:
-        print(f"  [{i['level']}] {i['code'] or '-'} {i['msg']}")
+    print(f"시세 기준일: { {k: v[-1]['d'] for k, v in prices.items() if v} }")
+    print(f"재고: MRP 기준월 {inventory['base_month']}, 계산 {inventory['computed_at']}")
+    for it in inventory["items"]:
+        print(f"  {it['code']} {it['grade']:8s} 합계 월말 {it['total']['end']}")
+        for l in it["lots"]:
+            print(f"      {l['maker']:14s} {l['usage']} 월초 {l['open']} 입고 {l['received']} 대기 {l['pending']} → {l['end']}")
+    print(f"입고이력: {len(all_receipts)}건 (이번에 {added}건 추가)")
+    for i in inventory["issues"] + data["purchase"]["issues"]:
+        print(f"  [확인] {i['code'] or '-'} {i['msg']}")
     print(f"시장 동향: {market['updated'] if market else '없음'}")
     print(f"{'저장' if changed else '변경 없음'}: {OUT}")
 

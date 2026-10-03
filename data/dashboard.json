@@ -1012,1064 +1012,476 @@
   ]
  },
  "inventory": {
-  "confirmed": null,
-  "pending": {
-   "as_of": "2026-09-03",
-   "source": "주간업데이트_입력템플릿_v3.xlsx",
-   "saved": "2026-09-07 08:07",
-   "suppliers": [
-    "Phison",
-    "Kernel & Core",
-    "Transcend",
-    "Tammuz"
-   ],
-   "months": {
-    "open": "9월기초",
-    "ends": [
-     "8월말",
-     "9월말",
-     "10월말",
-     "11월말",
-     "12월말",
-     "1월말"
-    ]
-   },
-   "items": [
-    {
-     "code": "JK50-10024A",
-     "name": "SSD 2.5\" 128GB",
-     "cat": "SSD",
-     "lots": [
-      {
-       "label": "일반",
-       "open": 2930,
-       "incoming": 0,
-       "last_price": 57,
-       "stock_price": 50.97,
-       "demand": [
-        110,
-        139.2,
-        72.2,
-        22.6,
-        110.57,
-        110.57
-       ],
-       "end": [
-        2820,
-        2680.8,
-        2608.6,
-        2586,
-        2475.43,
-        2364.87
-       ]
-      },
-      {
-       "label": "커널앤코어",
-       "open": 3342,
-       "incoming": 0,
-       "last_price": 45.5,
-       "stock_price": 44.22,
-       "demand": [
-        410,
-        556.8,
-        288.8,
-        90.4,
-        442.27,
-        442.27
-       ],
-       "end": [
-        2932,
-        2375.2,
-        2086.4,
-        1996,
-        1553.73,
-        1111.47
-       ]
-      }
+  "base_month": "2026-10",
+  "as_of": "2026-10-02",
+  "computed_at": "2026-10-02 13:21",
+  "uploads": {
+   "기초재고": "2026-10-01 09:01",
+   "입고_RAW": "2026-10-02 13:21",
+   "발주_RAW": "2026-10-01 09:57"
+  },
+  "months": [
+   "10월말",
+   "11월말",
+   "12월말",
+   "1월말",
+   "2월말",
+   "3월말"
+  ],
+  "items": [
+   {
+    "code": "JK50-10024A",
+    "name": "SSD 2.5\" 128GB",
+    "cat": "SSD",
+    "grade": "good",
+    "short_idx": null,
+    "short_lot": null,
+    "total": {
+     "open": 4972,
+     "received": 0,
+     "pending": 0,
+     "demand": [
+      197,
+      696,
+      361,
+      113,
+      555.5,
+      555.5
      ],
-     "note": null,
-     "managed": true,
-     "total": {
-      "open": 6272,
-      "incoming": 0,
-      "demand": [
-       520,
-       696,
-       361,
-       113,
-       552.84,
-       552.84
-      ],
-      "end": [
-       5752,
-       5056,
-       4695,
-       4582,
-       4029.16,
-       3476.34
-      ]
-     },
-     "grade": "good",
-     "short_idx": null,
-     "by_supplier": {
-      "Phison": 86,
-      "Kernel & Core": 3035,
-      "Transcend": 2002,
-      "Tammuz": 0
-     },
-     "stock_total": 5123,
-     "single_source": false
+     "end": [
+      4775,
+      4079,
+      3718,
+      3605,
+      3049.5,
+      2494
+     ]
     },
-    {
-     "code": "JK50-10022A",
-     "name": "SSD M.2 128GB",
-     "cat": "SSD",
-     "lots": [
-      {
-       "label": null,
-       "open": 909,
-       "incoming": 0,
-       "last_price": 42.2,
-       "stock_price": 40.22,
-       "demand": [
-        78,
-        68,
-        283,
-        1380,
-        138.33,
-        138.33
-       ],
-       "end": [
-        831,
-        763,
-        480,
-        -900,
-        -1038.33,
-        -1176.67
-       ]
-      }
-     ],
-     "note": null,
-     "managed": true,
-     "total": {
-      "open": 909,
-      "incoming": 0,
-      "demand": [
-       78,
-       68,
-       283,
-       1380,
-       138.33,
-       138.33
-      ],
-      "end": [
-       831,
-       763,
-       480,
-       -900,
-       -1038.33,
-       -1176.67
-      ]
-     },
-     "grade": "serious",
-     "short_idx": 3,
-     "by_supplier": {
-      "Phison": 0,
-      "Kernel & Core": 0,
-      "Transcend": 831,
-      "Tammuz": 0
-     },
-     "stock_total": 831,
-     "single_source": true
-    },
-    {
-     "code": "JK50-10033A",
-     "name": "SSD M.2 256GB",
-     "cat": "SSD",
-     "lots": [
-      {
-       "label": null,
-       "open": 244,
-       "incoming": 200,
-       "last_price": 75,
-       "stock_price": 70,
-       "demand": [
-        0,
-        80,
-        55,
-        15,
-        54.17,
-        54.17
-       ],
-       "end": [
-        444,
-        364,
-        309,
-        294,
-        239.83,
-        185.67
-       ]
-      }
-     ],
-     "note": null,
-     "managed": true,
-     "total": {
-      "open": 244,
-      "incoming": 200,
-      "demand": [
-       0,
-       80,
-       55,
-       15,
-       54.17,
-       54.17
-      ],
-      "end": [
-       444,
-       364,
-       309,
-       294,
-       239.83,
-       185.67
-      ]
-     },
-     "grade": "good",
-     "short_idx": null,
-     "by_supplier": {
-      "Phison": 0,
-      "Kernel & Core": 0,
-      "Transcend": 243,
-      "Tammuz": 0
-     },
-     "stock_total": 243,
-     "single_source": true
-    },
-    {
-     "code": "JK51-10012A",
-     "name": "DDR4 4GB",
-     "cat": "RAM",
-     "lots": [
-      {
-       "label": "일반",
-       "open": 345,
-       "incoming": 500,
-       "last_price": 38,
-       "stock_price": 38,
-       "demand": [
-        0,
-        42.3,
-        67.2,
-        26.4,
-        132.85,
-        132.85
-       ],
-       "end": [
-        845,
-        802.7,
-        735.5,
-        709.1,
-        576.25,
-        443.4
-       ]
-      },
-      {
-       "label": "커널앤코어",
-       "open": 590,
-       "incoming": 0,
-       "last_price": 30.5,
-       "stock_price": 30.5,
-       "demand": [
-        73,
-        98.7,
-        156.8,
-        61.6,
-        309.98,
-        309.98
-       ],
-       "end": [
-        517,
-        418.3,
-        261.5,
-        199.9,
-        -110.08,
-        -420.07
-       ]
-      }
-     ],
-     "note": null,
-     "managed": true,
-     "total": {
-      "open": 935,
-      "incoming": 500,
-      "demand": [
-       73,
-       141,
-       224,
-       88,
-       442.83,
-       442.83
-      ],
-      "end": [
-       1362,
-       1221,
-       997,
-       909,
-       466.17,
-       23.33
-      ]
-     },
-     "grade": "warning",
-     "short_idx": null,
-     "by_supplier": {
-      "Phison": 0,
-      "Kernel & Core": 517,
-      "Transcend": 0,
-      "Tammuz": 845
-     },
-     "stock_total": 1362,
-     "single_source": false
-    },
-    {
-     "code": "JK51-10012B",
-     "name": "DDR4 8GB",
-     "cat": "RAM",
-     "lots": [
-      {
-       "label": null,
-       "open": 3564,
-       "incoming": 0,
-       "last_price": 67,
-       "stock_price": 67.42,
-       "demand": [
-        740,
-        818,
-        680,
-        1560,
-        540.33,
-        540.33
-       ],
-       "end": [
-        2824,
-        2006,
-        1326,
-        -234,
-        -774.33,
-        -1314.67
-       ]
-      }
-     ],
-     "note": "크루셜(마이크론) 3k 입고대기",
-     "managed": true,
-     "total": {
-      "open": 3564,
-      "incoming": 0,
-      "demand": [
-       740,
-       818,
-       680,
-       1560,
-       540.33,
-       540.33
-      ],
-      "end": [
-       2824,
-       2006,
-       1326,
-       -234,
-       -774.33,
-       -1314.67
-      ]
-     },
-     "grade": "serious",
-     "short_idx": 3,
-     "by_supplier": {
-      "Phison": 0,
-      "Kernel & Core": 915,
-      "Transcend": 0,
-      "Tammuz": 1908
-     },
-     "stock_total": 2823,
-     "single_source": false
-    },
-    {
-     "code": "JK51-10011A",
-     "name": "RAM DDR3 2GB",
-     "cat": "RAM",
-     "lots": [
-      {
-       "label": null,
-       "open": 0,
-       "incoming": 0,
-       "last_price": 11,
-       "stock_price": 0,
-       "demand": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-       ],
-       "end": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-       ]
-      }
-     ],
-     "note": null,
-     "managed": false,
-     "total": {
-      "open": 0,
-      "incoming": 0,
-      "demand": [
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
-      ],
-      "end": [
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
-      ]
-     },
-     "grade": "good",
-     "short_idx": null
-    },
-    {
-     "code": "JK51-10011B",
-     "name": "RAM DDR3 4GB",
-     "cat": "RAM",
-     "lots": [
-      {
-       "label": null,
-       "open": 13,
-       "incoming": 0,
-       "last_price": 13,
-       "stock_price": 14.5,
-       "demand": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-       ],
-       "end": [
-        13,
-        13,
-        13,
-        13,
-        13,
-        13
-       ]
-      }
-     ],
-     "note": null,
-     "managed": false,
-     "total": {
-      "open": 13,
-      "incoming": 0,
-      "demand": [
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
-      ],
-      "end": [
-       13,
-       13,
-       13,
-       13,
-       13,
-       13
-      ]
-     },
-     "grade": "good",
-     "short_idx": null
-    },
-    {
-     "code": "JK51-10011C",
-     "name": "RAM DDR3 8GB",
-     "cat": "RAM",
-     "lots": [
-      {
-       "label": null,
-       "open": 1,
-       "incoming": 0,
-       "last_price": 23,
-       "stock_price": 23,
-       "demand": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-       ],
-       "end": [
-        1,
-        1,
-        1,
-        1,
-        1,
-        1
-       ]
-      }
-     ],
-     "note": null,
-     "managed": false,
-     "total": {
-      "open": 1,
-      "incoming": 0,
-      "demand": [
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
-      ],
-      "end": [
-       1,
-       1,
-       1,
-       1,
-       1,
-       1
-      ]
-     },
-     "grade": "good",
-     "short_idx": null
-    },
-    {
-     "code": "JK51-10012C",
-     "name": "RAM DDR4 16GB",
-     "cat": "RAM",
-     "lots": [
-      {
-       "label": null,
-       "open": 2,
-       "incoming": 0,
-       "last_price": 95,
-       "stock_price": 27,
-       "demand": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-       ],
-       "end": [
-        2,
-        2,
-        2,
-        2,
-        2,
-        2
-       ]
-      }
-     ],
-     "note": null,
-     "managed": false,
-     "total": {
-      "open": 2,
-      "incoming": 0,
-      "demand": [
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
-      ],
-      "end": [
-       2,
-       2,
-       2,
-       2,
-       2,
-       2
-      ]
-     },
-     "grade": "good",
-     "short_idx": null
-    },
-    {
-     "code": "JK51-10012D",
-     "name": "RAM DDR4 32GB",
-     "cat": "RAM",
-     "lots": [
-      {
-       "label": null,
-       "open": 4,
-       "incoming": 0,
-       "last_price": 55,
-       "stock_price": 55,
-       "demand": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-       ],
-       "end": [
-        4,
-        4,
-        4,
-        4,
-        4,
-        4
-       ]
-      }
-     ],
-     "note": null,
-     "managed": false,
-     "total": {
-      "open": 4,
-      "incoming": 0,
-      "demand": [
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
-      ],
-      "end": [
-       4,
-       4,
-       4,
-       4,
-       4,
-       4
-      ]
-     },
-     "grade": "good",
-     "short_idx": null
-    },
-    {
-     "code": "JK50-10023A",
-     "name": "SSD 2.5\" 64GB",
-     "cat": "SSD",
-     "lots": [
-      {
-       "label": null,
-       "open": 49,
-       "incoming": 0,
-       "last_price": 14,
-       "stock_price": 14,
-       "demand": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-       ],
-       "end": [
-        49,
-        49,
-        49,
-        49,
-        49,
-        49
-       ]
-      }
-     ],
-     "note": null,
-     "managed": false,
-     "total": {
-      "open": 49,
-      "incoming": 0,
-      "demand": [
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
-      ],
-      "end": [
-       49,
-       49,
-       49,
-       49,
-       49,
-       49
-      ]
-     },
-     "grade": "good",
-     "short_idx": null
-    },
-    {
-     "code": "JK50-10030B",
-     "name": "SSD mSATA 128GB",
-     "cat": "SSD",
-     "lots": [
-      {
-       "label": null,
-       "open": 88,
-       "incoming": 0,
-       "last_price": 16.9,
-       "stock_price": 16.9,
-       "demand": [
-        0,
-        13,
-        0,
-        0,
-        0,
-        0
-       ],
-       "end": [
-        88,
-        75,
-        75,
-        75,
-        75,
-        75
-       ]
-      }
-     ],
-     "note": null,
-     "managed": false,
-     "total": {
-      "open": 88,
-      "incoming": 0,
-      "demand": [
-       0,
-       13,
-       0,
-       0,
-       0,
-       0
-      ],
-      "end": [
-       88,
-       75,
-       75,
-       75,
-       75,
-       75
-      ]
-     },
-     "grade": "good",
-     "short_idx": null
-    },
-    {
-     "code": "JK50-10026A",
-     "name": "SSD 2.5\" 256GB",
-     "cat": "SSD",
-     "lots": [
-      {
-       "label": null,
-       "open": 22,
-       "incoming": 0,
-       "last_price": 73.5,
-       "stock_price": 24.5,
-       "demand": [
-        0,
-        8.33,
-        8.33,
-        8.33,
-        8.33,
-        8.33
-       ],
-       "end": [
-        22,
-        13.67,
-        5.33,
-        -3,
-        -11.33,
-        -19.67
-       ]
-      }
-     ],
-     "note": null,
-     "managed": false,
-     "total": {
-      "open": 22,
-      "incoming": 0,
-      "demand": [
-       0,
-       8.33,
-       8.33,
-       8.33,
-       8.33,
-       8.33
-      ],
-      "end": [
-       22,
-       13.67,
-       5.33,
-       -3,
-       -11.33,
-       -19.67
-      ]
-     },
-     "grade": "serious",
-     "short_idx": 3
-    },
-    {
-     "code": "JK50-10037A",
-     "name": "SSD M.2 512GB",
-     "cat": "SSD",
-     "lots": [
-      {
-       "label": null,
-       "open": 30,
-       "incoming": 0,
-       "last_price": 45,
-       "stock_price": 45,
-       "demand": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-       ],
-       "end": [
-        30,
-        30,
-        30,
-        30,
-        30,
-        30
-       ]
-      }
-     ],
-     "note": null,
-     "managed": false,
-     "total": {
-      "open": 30,
-      "incoming": 0,
-      "demand": [
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
-      ],
-      "end": [
-       30,
-       30,
-       30,
-       30,
-       30,
-       30
-      ]
-     },
-     "grade": "good",
-     "short_idx": null
-    },
-    {
-     "code": "JK50-10035A",
-     "name": "SSD 2.5\" 512GB",
-     "cat": "SSD",
-     "lots": [
-      {
-       "label": null,
-       "open": 0,
-       "incoming": 0,
-       "last_price": 102,
-       "stock_price": 0,
-       "demand": [
-        0,
-        7.5,
-        7.5,
-        7.5,
-        7.5,
-        7.5
-       ],
-       "end": [
-        0,
-        -7.5,
-        -15,
-        -22.5,
-        -30,
-        -37.5
-       ]
-      }
-     ],
-     "note": null,
-     "managed": false,
-     "total": {
-      "open": 0,
-      "incoming": 0,
-      "demand": [
-       0,
-       7.5,
-       7.5,
-       7.5,
-       7.5,
-       7.5
-      ],
-      "end": [
-       0,
-       -7.5,
-       -15,
-       -22.5,
-       -30,
-       -37.5
-      ]
-     },
-     "grade": "critical",
-     "short_idx": 1
-    },
-    {
-     "code": "JK50-10036A",
-     "name": "SSD mSATA 256GB",
-     "cat": "SSD",
-     "lots": [
-      {
-       "label": null,
-       "open": 1,
-       "incoming": 0,
-       "last_price": 56000,
-       "stock_price": 56000,
-       "demand": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-       ],
-       "end": [
-        1,
-        1,
-        1,
-        1,
-        1,
-        1
-       ]
-      }
-     ],
-     "note": null,
-     "managed": false,
-     "total": {
-      "open": 1,
-      "incoming": 0,
-      "demand": [
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
-      ],
-      "end": [
-       1,
-       1,
-       1,
-       1,
-       1,
-       1
-      ]
-     },
-     "grade": "good",
-     "short_idx": null
-    },
-    {
-     "code": "JK50-10034A",
-     "name": "SSD mSATA 512GB",
-     "cat": "SSD",
-     "lots": [
-      {
-       "label": null,
-       "open": 0,
-       "incoming": 0,
-       "last_price": 86000,
-       "stock_price": 0,
-       "demand": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-       ],
-       "end": [
-        0,
-        0,
-        0,
-        0,
-        0,
-        0
-       ]
-      }
-     ],
-     "note": null,
-     "managed": false,
-     "total": {
-      "open": 0,
-      "incoming": 0,
-      "demand": [
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
-      ],
-      "end": [
-       0,
-       0,
-       0,
-       0,
-       0,
-       0
-      ]
-     },
-     "grade": "good",
-     "short_idx": null
-    }
-   ],
-   "validation": {
-    "ok": false,
-    "issues": [
+    "lots": [
      {
-      "level": "error",
-      "code": "JK51-10012B",
-      "check": "stock_vs_balance",
-      "msg": "재고현황 합계 2,823 ≠ 월별과부족 첫 월말 2,824 / 기초 3,564"
+      "maker": "Phison",
+      "usage": "해외",
+      "open": 86,
+      "received": 0,
+      "pending": 0,
+      "end": [
+       0,
+       0,
+       0,
+       0,
+       0,
+       0
+      ],
+      "grade": "good",
+      "short_idx": null
      },
      {
-      "level": "error",
-      "code": "JK50-10024A",
-      "check": "stock_vs_balance",
-      "msg": "재고현황 합계 5,123 ≠ 월별과부족 첫 월말 5,752 / 기초 6,272"
+      "maker": "Kernel & Core",
+      "usage": "공용",
+      "open": 3035,
+      "received": 0,
+      "pending": 0,
+      "end": [
+       3035,
+       3024,
+       3013,
+       3002,
+       2988.59,
+       2494
+      ],
+      "grade": "good",
+      "short_idx": null
      },
      {
-      "level": "error",
-      "code": "JK50-10033A",
-      "check": "stock_vs_balance",
-      "msg": "재고현황 합계 243 ≠ 월별과부족 첫 월말 444 / 기초 244"
-     },
-     {
-      "level": "warn",
-      "code": null,
-      "check": "month_label",
-      "msg": "기준일자는 9월인데 월별과부족 첫 열은 8월말입니다. 월 표기를 확인해 주세요"
+      "maker": "Transcend",
+      "usage": "해외",
+      "open": 1851,
+      "received": 0,
+      "pending": 0,
+      "end": [
+       1740,
+       1055,
+       705,
+       603,
+       60.91,
+       0
+      ],
+      "grade": "good",
+      "short_idx": null
      }
-    ]
+    ],
+    "usage_demand": {
+     "국내": [
+      0,
+      11,
+      11,
+      11,
+      13.41,
+      13.41
+     ],
+     "해외": [
+      197,
+      685,
+      350,
+      102,
+      542.09,
+      542.09
+     ]
+    },
+    "single_source": false
+   },
+   {
+    "code": "JK50-10022A",
+    "name": "SSD M.2 128GB",
+    "cat": "SSD",
+    "grade": "serious",
+    "short_idx": 3,
+    "short_lot": null,
+    "total": {
+     "open": 1525,
+     "received": 0,
+     "pending": 0,
+     "demand": [
+      178,
+      68,
+      283,
+      1380,
+      122.67,
+      122.67
+     ],
+     "end": [
+      1347,
+      1279,
+      996,
+      -384,
+      -506.67,
+      -629.33
+     ]
+    },
+    "lots": [
+     {
+      "maker": "Transcend",
+      "usage": "공용",
+      "open": 1525,
+      "received": 0,
+      "pending": 0,
+      "end": [
+       1347,
+       1279,
+       996,
+       -384,
+       -506.67,
+       -629.33
+      ],
+      "grade": "serious",
+      "short_idx": 3
+     }
+    ],
+    "usage_demand": {
+     "국내": [
+      1,
+      63,
+      26,
+      20,
+      7.07,
+      7.07
+     ],
+     "해외": [
+      177,
+      0,
+      257,
+      1360,
+      115.28,
+      115.28
+     ],
+     "미분류": [
+      0,
+      5,
+      0,
+      0,
+      0.32,
+      0.32
+     ]
+    },
+    "single_source": true
+   },
+   {
+    "code": "JK50-10033A",
+    "name": "SSD M.2 256GB",
+    "cat": "SSD",
+    "grade": "serious",
+    "short_idx": 4,
+    "short_lot": null,
+    "total": {
+     "open": 243,
+     "received": 0,
+     "pending": 0,
+     "demand": [
+      72,
+      80,
+      55,
+      15,
+      54.17,
+      54.17
+     ],
+     "end": [
+      171,
+      91,
+      36,
+      21,
+      -33.17,
+      -87.33
+     ]
+    },
+    "lots": [
+     {
+      "maker": "Transcend",
+      "usage": "공용",
+      "open": 243,
+      "received": 0,
+      "pending": 0,
+      "end": [
+       171,
+       91,
+       36,
+       21,
+       -33.17,
+       -87.33
+      ],
+      "grade": "serious",
+      "short_idx": 4
+     }
+    ],
+    "usage_demand": {
+     "국내": [
+      12,
+      0,
+      0,
+      0,
+      2.93,
+      2.93
+     ],
+     "해외": [
+      60,
+      80,
+      55,
+      15,
+      51.24,
+      51.24
+     ]
+    },
+    "single_source": true
+   },
+   {
+    "code": "JK51-10012A",
+    "name": "DDR4 4GB",
+    "cat": "RAM",
+    "grade": "warning",
+    "short_idx": 5,
+    "short_lot": {
+     "maker": "Tammuz",
+     "usage": "해외"
+    },
+    "total": {
+     "open": 1327,
+     "received": 0,
+     "pending": 0,
+     "demand": [
+      1,
+      141,
+      224,
+      88,
+      416.17,
+      416.17
+     ],
+     "end": [
+      1326,
+      1185,
+      961,
+      873,
+      456.83,
+      40.67
+     ]
+    },
+    "lots": [
+     {
+      "maker": "Kernel & Core",
+      "usage": "국내",
+      "open": 497,
+      "received": 0,
+      "pending": 0,
+      "end": [
+       496,
+       425,
+       391,
+       363,
+       240.17,
+       117.33
+      ],
+      "grade": "good",
+      "short_idx": null
+     },
+     {
+      "maker": "Tammuz",
+      "usage": "해외",
+      "open": 830,
+      "received": 0,
+      "pending": 0,
+      "end": [
+       830,
+       760,
+       570,
+       510,
+       216.67,
+       -76.67
+      ],
+      "grade": "warning",
+      "short_idx": 5
+     }
+    ],
+    "usage_demand": {
+     "국내": [
+      1,
+      71,
+      34,
+      28,
+      122.83,
+      122.83
+     ],
+     "해외": [
+      0,
+      70,
+      190,
+      60,
+      293.33,
+      293.33
+     ]
+    },
+    "single_source": false
+   },
+   {
+    "code": "JK51-10012B",
+    "name": "DDR4 8GB",
+    "cat": "RAM",
+    "grade": "good",
+    "short_idx": null,
+    "short_lot": null,
+    "total": {
+     "open": 4410,
+     "received": 1500,
+     "pending": 1500,
+     "demand": [
+      429,
+      818,
+      680,
+      1560,
+      515.33,
+      515.33
+     ],
+     "end": [
+      6981,
+      6163,
+      5483,
+      3923,
+      3407.67,
+      2892.33
+     ]
+    },
+    "lots": [
+     {
+      "maker": "Kernel & Core",
+      "usage": "공용",
+      "open": 915,
+      "received": 0,
+      "pending": 0,
+      "end": [
+       903,
+       900,
+       897,
+       894,
+       890.9,
+       887.79
+      ],
+      "grade": "good",
+      "short_idx": null
+     },
+     {
+      "maker": "Tammuz",
+      "usage": "해외",
+      "open": 1995,
+      "received": 0,
+      "pending": 0,
+      "end": [
+       1578,
+       763,
+       86,
+       0,
+       0,
+       0
+      ],
+      "grade": "good",
+      "short_idx": null
+     },
+     {
+      "maker": "Crucial",
+      "usage": "해외",
+      "open": 1500,
+      "received": 1500,
+      "pending": 1500,
+      "end": [
+       4500,
+       4500,
+       4500,
+       3029,
+       2516.77,
+       2004.54
+      ],
+      "grade": "good",
+      "short_idx": null
+     }
+    ],
+    "usage_demand": {
+     "국내": [
+      12,
+      3,
+      3,
+      3,
+      3.1,
+      3.1
+     ],
+     "해외": [
+      417,
+      815,
+      677,
+      1557,
+      512.23,
+      512.23
+     ]
+    },
+    "single_source": false
    }
-  }
+  ],
+  "pos": [
+   {
+    "code": "JK51-10012B",
+    "due": "2026-10-25",
+    "vendor": "보이스아이주식회사",
+    "maker": "Crucial",
+    "qty": 1500,
+    "price": 44.5,
+    "currency": "USD"
+   }
+  ],
+  "issues": [
+   {
+    "code": "JK50-10022A",
+    "msg": "용도 미분류 모델 표기: (모델 없음) (설정의 '모델용도' 시트에 추가해 주세요)"
+   },
+   {
+    "code": "JK51-10012B",
+    "msg": "당월 입고 1,500개와 입고대기 1,500개가 함께 잡혀 있습니다. 발주 자료(2026-10-01 09:57)가 입고 자료(2026-10-02 13:21)보다 먼저 올라가 같은 물량이 두 번 계산됐을 수 있습니다"
+   }
+  ]
  },
  "purchase": {
   "receipts": {
@@ -2121,8 +1533,8 @@
     },
     {
      "m": "2024-10",
-     "price": 17.17,
-     "qty": 1800
+     "price": 17.19,
+     "qty": 1300
     },
     {
      "m": "2025-01",
@@ -2398,7 +1810,7 @@
     {
      "m": "2025-01",
      "price": 9.5,
-     "qty": 400
+     "qty": 200
     },
     {
      "m": "2025-02",
@@ -2550,7 +1962,7 @@
     {
      "m": "2025-05",
      "price": 12.0,
-     "qty": 800
+     "qty": 600
     },
     {
      "m": "2025-06",
@@ -2616,79 +2028,114 @@
      "m": "2026-06",
      "price": 55.6,
      "qty": 5
+    },
+    {
+     "m": "2026-10",
+     "price": 44.5,
+     "qty": 1500
     }
    ]
   },
   "recent": [
    {
+    "d": "2026-10-01",
+    "code": "JK51-10012B",
+    "qty": 1500,
+    "price": 44.5,
+    "maker": "Crucial",
+    "needs_maker": true,
+    "vendor": "보이스아이주식회사",
+    "no": "PUGR20261001-0044"
+   },
+   {
     "d": "2026-09-01",
     "code": "JK51-10012A",
     "qty": 500,
-    "price": 30,
-    "lot": null
+    "price": 30.0,
+    "maker": "Tammuz",
+    "needs_maker": false,
+    "vendor": "주식회사 지엔이",
+    "no": "PUGR20260901-0001"
    },
    {
     "d": "2026-08-21",
     "code": "JK51-10012A",
     "qty": 1000,
     "price": 30.5,
-    "lot": "커널앤코어"
+    "maker": "Kernel & Core",
+    "needs_maker": false,
+    "vendor": "에스티엠디스플레이(주)",
+    "no": "PUGR20260821-0011"
    },
    {
     "d": "2026-08-21",
     "code": "JK50-10033A",
     "qty": 200,
     "price": 74.9,
-    "lot": null
+    "maker": null,
+    "needs_maker": false,
+    "vendor": "에스티엠디스플레이(주)",
+    "no": "PUGR20260821-0011"
    },
    {
     "d": "2026-07-13",
     "code": "JK50-10033A",
     "qty": 100,
-    "price": 75,
-    "lot": null
+    "price": 75.0,
+    "maker": null,
+    "needs_maker": false,
+    "vendor": "에스티엠디스플레이(주)",
+    "no": "PUGR20260713-0004"
    },
    {
     "d": "2026-07-13",
     "code": "JK50-10022A",
     "qty": 500,
     "price": 42.2,
-    "lot": null
+    "maker": null,
+    "needs_maker": false,
+    "vendor": "에스티엠디스플레이(주)",
+    "no": "PUGR20260713-0004"
    },
    {
     "d": "2026-06-24",
     "code": "JK50-10022A",
     "qty": 500,
     "price": 40.7,
-    "lot": null
+    "maker": "Transcend",
+    "needs_maker": false,
+    "vendor": "유한 엠엔티",
+    "no": "PUGR20260624-0006"
    },
    {
     "d": "2026-06-19",
     "code": "JK51-10012B",
     "qty": 5,
     "price": 55.6,
-    "lot": null
+    "maker": null,
+    "needs_maker": false,
+    "vendor": "ACDC LABS LIMITED",
+    "no": "202606190001"
    },
    {
     "d": "2026-06-19",
     "code": "JK51-10012A",
     "qty": 5,
     "price": 37.8,
-    "lot": null
+    "maker": null,
+    "needs_maker": false,
+    "vendor": "ACDC LABS LIMITED",
+    "no": "202606190001"
    },
    {
     "d": "2026-05-14",
     "code": "JK51-10012B",
     "qty": 1000,
-    "price": 67,
-    "lot": null
-   },
-   {
-    "d": "2026-05-14",
-    "code": "JK51-10012A",
-    "qty": 1500,
-    "price": 38,
-    "lot": null
+    "price": 67.0,
+    "maker": "Tammuz",
+    "needs_maker": false,
+    "vendor": "주식회사 지엔이",
+    "no": "PUGR20260514-0008"
    }
   ],
   "quotes": {
@@ -2704,6 +2151,38 @@
     "2026-08"
    ],
    "rows": [
+    {
+     "cat": "RAM",
+     "spec": "DDR4 16GB",
+     "maker": "GUDGA",
+     "p": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      71.9,
+      null
+     ]
+    },
+    {
+     "cat": "RAM",
+     "spec": "DDR4 16GB",
+     "maker": "Tammuz",
+     "p": [
+      null,
+      null,
+      null,
+      null,
+      97,
+      null,
+      95,
+      95,
+      null
+     ]
+    },
     {
      "cat": "RAM",
      "spec": "DDR4 4GB",
@@ -2882,33 +2361,49 @@
     },
     {
      "cat": "RAM",
-     "spec": "DDR4 16GB",
-     "maker": "GUDGA",
-     "p": [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      71.9,
-      null
-     ]
-    },
-    {
-     "cat": "RAM",
-     "spec": "DDR4 16GB",
+     "spec": "DDR5 16GB",
      "maker": "Tammuz",
      "p": [
       null,
       null,
       null,
       null,
-      97,
       null,
-      95,
-      95,
+      null,
+      null,
+      209,
+      null
+     ]
+    },
+    {
+     "cat": "RAM",
+     "spec": "DDR5 8GB",
+     "maker": "Samsung",
+     "p": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      110,
+      null
+     ]
+    },
+    {
+     "cat": "RAM",
+     "spec": "DDR5 8GB",
+     "maker": "Tammuz",
+     "p": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      128,
       null
      ]
     },
@@ -3343,62 +2838,12 @@
       47.06,
       null
      ]
-    },
-    {
-     "cat": "RAM",
-     "spec": "DDR5 8GB",
-     "maker": "Samsung",
-     "p": [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      110,
-      null
-     ]
-    },
-    {
-     "cat": "RAM",
-     "spec": "DDR5 8GB",
-     "maker": "Tammuz",
-     "p": [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      128,
-      null
-     ]
-    },
-    {
-     "cat": "RAM",
-     "spec": "DDR5 16GB",
-     "maker": "Tammuz",
-     "p": [
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      209,
-      null
-     ]
     }
    ]
   },
   "issues": [
    {
-    "level": "warn",
     "code": "JK50-10022A",
-    "check": "receipt_amount",
     "msg": "입고이력 2026-07-13: 수량 500 × 단가 42.2 ≠ 금액 42,200"
    }
   ]

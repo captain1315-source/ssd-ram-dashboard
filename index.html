@@ -123,6 +123,7 @@ main.in { padding: 16px; }
 .b-good { color: var(--good-fg); background: var(--good-bg); }
 .b-slate { color: var(--slate-fg); background: var(--slate-bg); }
 .b-blue { color: var(--primary); background: var(--primary-tint); }
+.b-line { color: var(--sub); box-shadow: inset 0 0 0 1px var(--border); }
 .code { font-size: 12px; font-weight: 500; color: var(--sub); font-variant-numeric: tabular-nums; }
 
 /* 알림 */
@@ -272,20 +273,26 @@ a:hover { text-decoration: underline; }
     <div class="alerts stack"></div>
     <div class="card">
       <div class="card-head">
-        <h2><i class="fa-solid fa-boxes-stacked"></i>제조사별 재고 현황</h2>
+        <h2><i class="fa-solid fa-boxes-stacked"></i>제조사별 재고·과부족</h2>
         <div class="meta" id="stockMeta"></div>
       </div>
       <div class="scroll" id="stockTable"></div>
+      <p class="caption">월초재고에 당월입고와 입고대기(당월 납기 발주잔량)를 더하고 월별 소요를 뺀 월말 재고입니다. 국내 소요는 국내·공용 재고에서, 해외 소요는 해외 재고를 먼저 쓰고 모자라면 공용 재고에서 뺍니다. 붉은 칸은 부족, 노란 칸은 다음 달 소진 예상입니다.</p>
     </div>
     <div class="card">
       <div class="card-head">
-        <h2><i class="fa-solid fa-calendar-days"></i>월별 과부족 현황</h2>
-        <div class="meta">월말재고 기준</div>
+        <h2><i class="fa-solid fa-calendar-days"></i>용도별 월 소요</h2>
+        <div class="meta">당월은 생산계획, 이후는 S&amp;OP 기준</div>
       </div>
-      <div class="scroll" id="balanceTable"></div>
-      <p class="caption">붉은 칸은 부족(마이너스), 노란 칸은 다음 달 소진 예상입니다. 칸에 마우스를 올리면 그 달 소요가 보입니다.</p>
+      <div class="scroll" id="usageTable"></div>
     </div>
-    <div id="othersBlock"></div>
+    <div class="card" id="poCard">
+      <div class="card-head">
+        <h2><i class="fa-solid fa-hourglass-half"></i>입고대기</h2>
+        <div class="meta">발주잔량, 납기순</div>
+      </div>
+      <div class="scroll" id="poTable"></div>
+    </div>
   </section>
 
   <section class="panel stack" id="p-purchase" role="tabpanel" hidden>
@@ -303,11 +310,11 @@ a:hover { text-decoration: underline; }
     </div>
     <div class="cols two" id="itemCharts"></div>
     <div class="card">
-      <div class="card-head"><h2><i class="fa-solid fa-truck-ramp-box"></i>최근 입고</h2><div class="meta">관리 품목, USD 입고분</div></div>
+      <div class="card-head"><h2><i class="fa-solid fa-truck-ramp-box"></i>최근 입고</h2><div class="meta">관리 품목, USD 입고분 10건</div></div>
       <div class="scroll" id="recentTable"></div>
     </div>
     <div class="card">
-      <div class="card-head"><h2><i class="fa-solid fa-tags"></i>공급사별 단가 (참고)</h2><div class="meta">단가현황(참고) 시트</div></div>
+      <div class="card-head"><h2><i class="fa-solid fa-tags"></i>공급사별 견적 단가</h2><div class="meta">단가현황.xlsx, 같은 달에는 가장 최근 견적</div></div>
       <div class="card-body"><details class="tv" style="margin-top:0"><summary>전체 표 펼치기</summary><div class="scroll" id="quoteTable"></div></details></div>
     </div>
   </section>
@@ -325,7 +332,7 @@ const KIND_BADGE = {'계약가': 'b-blue', '현물가': 'b-good', '구조': 'b-s
 const FONT = '"Pretendard Variable", Pretendard, "Malgun Gothic", sans-serif';
 const THEME_KEY = 'ssdram-theme';
 
-let DATA, snapKey, range = 'all', current = 'summary';
+let DATA, range = 'all', current = 'summary';
 const charts = {};
 
 const $ = id => document.getElementById(id);
@@ -346,53 +353,51 @@ function colors() {
           ddr4: v('--s-ddr4'), ddr5: v('--s-ddr5'), nand: v('--s-nand'), ours: v('--s-ours'), contract: v('--s-contract')};
 }
 
-function snapshot() { const inv = DATA.inventory; return inv[snapKey] || inv.confirmed || inv.pending; }
-function itemName(code) { const it = snapshot().items.find(i => i.code === code); return it ? it.name : code; }
+const INV = () => DATA.inventory;
+function itemName(code) { const it = INV().items.find(i => i.code === code); return it ? it.name : code; }
 const gradeBadge = g => `<span class="badge grade b-${g}">${GRADE[g]}</span>`;
 const nameCell = it => `${esc(it.name)} <span class="code">${it.code}</span>`;
+const USAGE_BADGE = {'국내': 'b-blue', '해외': 'b-slate', '공용': 'b-line'};
+const usageBadge = u => `<span class="badge ${USAGE_BADGE[u] || 'b-warning'}">${esc(u)}</span>`;
+const makerCell = m => m === '미지정' ? '<span class="badge b-warning">제조사 미지정</span>' : esc(m);
+const onHand = it => it.total.open + it.total.received;
 
 /* ---------- 상단 ---------- */
 function renderChips() {
-  const S = snapshot(), spot = DATA.prices.ddr4_spot.at(-1);
-  const days = Math.floor((Date.now() - ts(S.as_of)) / 864e5);
-  const stale = days > 10;
+  const I = INV(), spot = DATA.prices.ddr4_spot.at(-1);
+  const stale = (Date.now() - ts(I.as_of)) / 864e5 > 4;
   $('chips').innerHTML = [
     `<span class="chip">시세 ${spot.d}</span>`,
-    `<span class="chip${stale ? ' stale' : ''}">${stale ? '<i class="fa-solid fa-triangle-exclamation"></i> ' : ''}재고 ${S.as_of} · ${days}일 전</span>`,
+    `<span class="chip${stale ? ' stale' : ''}">${stale ? '<i class="fa-solid fa-triangle-exclamation"></i> ' : ''}재고 ${I.computed_at}</span>`,
     DATA.market ? `<span class="chip">동향 ${DATA.market.updated}</span>` : '',
   ].join('');
-  const risky = S.items.filter(it => it.managed && (it.grade === 'critical' || it.grade === 'serious')).length;
+  const risky = I.items.filter(it => it.grade === 'critical' || it.grade === 'serious').length;
   $('riskCount').hidden = !risky;
   $('riskCount').textContent = risky;
 }
 
-/* ---------- 정합성 알림 ---------- */
+/* ---------- 확인 필요 알림 ---------- */
+function noticeHtml(issues) {
+  return issues.length ? `<div class="notice"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>확인 필요</strong><ul>${issues.map(i =>
+    `<li>${i.code ? `${esc(itemName(i.code))} (${i.code}): ` : ''}${esc(i.msg)}</li>`).join('')}</ul></div></div>` : '';
+}
+
 function renderAlerts() {
-  const inv = DATA.inventory, p = inv.pending, c = inv.confirmed, S = snapshot();
-  const line = i => `<li>${i.code ? `${esc(itemName(i.code))} (${i.code}): ` : ''}${esc(i.msg)}</li>`;
-  const box = (title, body) => `<div class="notice"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>${title}</strong>${body}</div></div>`;
-  let html = '';
-  if (p) {
-    const errs = p.validation.issues.filter(i => i.level === 'error');
-    const head = c
-      ? `최신 입력본(기준일 ${p.as_of})이 정합성 검사를 통과하지 못해 확정본(기준일 ${c.as_of})을 유지합니다.`
-      : `최신 입력본(기준일 ${p.as_of})이 정합성 검사를 통과하지 못했습니다. 확정본이 아직 없어 입력본 수치를 그대로 표시합니다.`;
-    const toggle = c ? `<div class="pills">
-        <button class="pill" data-snap="confirmed" aria-pressed="${snapKey === 'confirmed'}">확정본</button>
-        <button class="pill" data-snap="pending" aria-pressed="${snapKey === 'pending'}">최신 입력본(미검증)</button></div>` : '';
-    html += box('재고 수치 미확정', `<div>${head}</div>${toggle}<ul>${errs.map(line).join('')}</ul>`);
-  }
-  const warns = S.validation.issues.filter(i => i.level === 'warn');
-  if (warns.length) html += box('확인 필요', `<ul>${warns.map(line).join('')}</ul>`);
+  const html = noticeHtml(INV().issues);
   document.querySelectorAll('.alerts').forEach(el => { el.innerHTML = html; el.hidden = !html; });
 }
 
 /* ---------- 요약 ---------- */
 function shortText(it, months) {
-  const e = it.total.end, last = months.ends.at(-1);
-  if (it.short_idx != null) return `${months.ends[it.short_idx]} 부족 전환 (${n0(e[it.short_idx])})`;
-  if (it.grade === 'warning') return `${last} 이후 소진 예상 (잔여 ${n0(e.at(-1))})`;
-  return `${last}까지 재고 확보 (잔여 ${n0(e.at(-1))})`;
+  const last = months.at(-1);
+  if (it.short_idx != null) {
+    if (!it.short_lot) return `${months[it.short_idx]} 부족 전환 (${n0(it.total.end[it.short_idx])})`;
+    const lot = it.lots.find(l => l.maker === it.short_lot.maker);
+    const who = it.short_lot.usage === '공용' ? it.short_lot.maker : `${it.short_lot.usage}용 ${it.short_lot.maker}`;
+    return `${esc(who)} ${months[it.short_idx]} 부족 전환 (${n0(lot.end[it.short_idx])})`;
+  }
+  if (it.grade === 'warning') return `${last} 이후 소진 예상 (잔여 ${n0(it.total.end.at(-1))})`;
+  return `${last}까지 재고 확보 (잔여 ${n0(it.total.end.at(-1))})`;
 }
 
 function prevMonthEnd(series) {
@@ -421,17 +426,17 @@ function spark(series, colorVar) {
 }
 
 function renderSummary() {
-  const S = snapshot(), P = DATA.prices;
-  const managed = S.items.filter(it => it.managed).sort((a, b) => GRADE_ORDER.indexOf(a.grade) - GRADE_ORDER.indexOf(b.grade));
-  $('riskList').innerHTML = managed.map(it => `
+  const I = INV(), P = DATA.prices;
+  const sorted = [...I.items].sort((a, b) => GRADE_ORDER.indexOf(a.grade) - GRADE_ORDER.indexOf(b.grade));
+  $('riskList').innerHTML = sorted.map(it => `
     <li class="rank g-${it.grade}">
       ${gradeBadge(it.grade)}
       <div class="rank-main">
         <div class="rank-name">${esc(it.name)}${it.single_source ? ' <span class="badge b-slate">단일 공급사</span>' : ''}</div>
-        <small class="${it.short_idx != null ? 'short' : ''}">${shortText(it, S.months)}</small>
+        <small class="${it.short_idx != null ? 'short' : ''}">${shortText(it, I.months)}</small>
         <small>${it.code}</small>
       </div>
-      <div class="rank-val"><div class="num">${n0(it.stock_total)}</div><small>현재고</small></div>
+      <div class="rank-val"><div class="num">${n0(onHand(it))}</div><small>월초 + 당월입고</small></div>
     </li>`).join('');
 
   const row = (name, spec, series, colorVar, vs = '전월말 대비', note = '') => {
@@ -458,35 +463,29 @@ function renderSummary() {
 
 /* ---------- 재고·과부족 ---------- */
 function renderInventory() {
-  const S = snapshot(), managed = S.items.filter(it => it.managed), notes = DATA.market?.item_notes || {};
-  $('stockMeta').textContent = `기준일자 ${S.as_of} · ${S.source}`;
+  const I = INV(), M = I.months;
+  $('stockMeta').textContent = `MRP 기준월 ${I.base_month} · 계산 ${I.computed_at}`;
 
-  $('stockTable').innerHTML = `<table>
-    <thead><tr><th class="l">품목</th>${S.suppliers.map(s => `<th>${esc(s)}</th>`).join('')}<th>재고 합계</th><th class="l">리스크</th></tr></thead>
-    <tbody>${managed.map(it => `<tr>
-      <td class="l name">${nameCell(it)}${it.single_source ? ' <span class="badge b-slate">단일 공급사</span>' : ''}</td>
-      ${S.suppliers.map(s => `<td>${it.by_supplier?.[s] ? n0(it.by_supplier[s]) : '-'}</td>`).join('')}
-      <td><span class="num" style="font-size:14.5px">${n0(it.stock_total)}</span></td><td class="l">${gradeBadge(it.grade)}</td></tr>`).join('')}</tbody></table>`;
-
-  const cells = (l, lowLast) => `<td>${n0(l.open)}</td><td>${l.incoming ? n0(l.incoming) : '-'}</td>` +
-    l.end.map((v, k) => `<td class="${v < 0 ? 'neg' : lowLast && k === l.end.length - 1 ? 'low' : ''}" title="소요 ${n0(l.demand[k])}">${n0(v)}</td>`).join('');
+  const cells = (o, lowLast, demand) => `<td>${n0(o.open)}</td><td>${o.received ? n0(o.received) : '-'}</td><td>${o.pending ? n0(o.pending) : '-'}</td>` +
+    o.end.map((v, k) => `<td class="${v < 0 ? 'neg' : lowLast && k === o.end.length - 1 ? 'low' : ''}"${demand ? ` title="소요 ${n0(demand[k])}"` : ''}>${n0(v)}</td>`).join('');
   const rows = it => {
-    const note = [it.note, notes[it.code]].filter(Boolean).map(esc).join(' · ');
-    const lowLast = it.grade === 'warning' && it.short_idx == null;
-    if (it.lots.length === 1)
-      return `<tr><td class="l name">${nameCell(it)}</td><td class="l">-</td>${cells(it.lots[0], lowLast)}<td class="l">${gradeBadge(it.grade)}</td><td class="l note">${note}</td></tr>`;
-    return it.lots.map((l, k) => `<tr class="lot"><td class="l name">${k ? '' : nameCell(it)}</td><td class="l">${esc(l.label)}</td>${cells(l, false)}<td></td><td></td></tr>`).join('') +
-      `<tr class="total"><td class="l"></td><td class="l">합계</td>${cells(it.total, lowLast)}<td class="l">${gradeBadge(it.grade)}</td><td class="l note">${note}</td></tr>`;
+    const lowLast = it.grade === 'warning' && it.short_idx == null, single = it.lots.length === 1;
+    const lots = it.lots.map((l, k) => `<tr class="${single ? '' : 'lot'}"><td class="l name">${k ? '' : nameCell(it)}</td>
+      <td class="l">${makerCell(l.maker)}</td><td class="l">${usageBadge(l.usage)}</td>${cells(l, single && lowLast, single && it.total.demand)}
+      <td class="l">${single ? gradeBadge(it.grade) : l.grade !== 'good' ? gradeBadge(l.grade) : ''}</td></tr>`).join('');
+    return single ? lots : lots + `<tr class="total"><td class="l"></td><td class="l">합계</td><td></td>${cells(it.total, lowLast, it.total.demand)}<td class="l">${gradeBadge(it.grade)}</td></tr>`;
   };
-  const head = `<thead><tr><th class="l">품목</th><th class="l">로트</th><th>${esc(S.months.open)}</th><th>입고대기</th>${S.months.ends.map(m => `<th>${esc(m)}</th>`).join('')}<th class="l">리스크</th><th class="l">비고</th></tr></thead>`;
-  $('balanceTable').innerHTML = `<table>${head}<tbody>${managed.map(rows).join('')}</tbody></table>`;
+  $('stockTable').innerHTML = `<table>
+    <thead><tr><th class="l">품목</th><th class="l">제조사</th><th class="l">용도</th><th>월초재고</th><th>당월입고</th><th>입고대기</th>${M.map(m => `<th>${esc(m)}</th>`).join('')}<th class="l">리스크</th></tr></thead>
+    <tbody>${I.items.map(rows).join('')}</tbody></table>`;
 
-  const others = S.items.filter(it => !it.managed && it.total.end.some(v => v < 0));
-  $('othersBlock').innerHTML = others.length ? `<div class="card">
-    <div class="card-head"><h2><i class="fa-solid fa-circle-exclamation"></i>기타 품목 중 부족 예상</h2><div class="meta">관리 5종 외</div></div>
-    <div class="scroll"><table>
-    <thead><tr><th class="l">품목</th><th>${esc(S.months.open)}</th>${S.months.ends.map(m => `<th>${esc(m)}</th>`).join('')}</tr></thead>
-    <tbody>${others.map(it => `<tr><td class="l name">${nameCell(it)}</td><td>${n0(it.total.open)}</td>${it.total.end.map(v => `<td class="${v < 0 ? 'neg' : ''}">${n0(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>` : '';
+  $('usageTable').innerHTML = table(['품목', '용도', ...M.map(m => esc(m.replace('말', '')))],
+    I.items.flatMap(it => Object.entries(it.usage_demand).map(([u, ds], k) => [k ? '' : `<strong>${esc(it.name)}</strong> <span class="code">${it.code}</span>`, usageBadge(u), ...ds.map(n0)])), [0, 1]);
+
+  const money = p => p.price == null ? '-' : p.currency === 'USD' ? usd(p.price) : n0(p.price) + (p.currency === 'KRW' ? '원' : '');
+  $('poCard').hidden = !I.pos.length;
+  $('poTable').innerHTML = table(['납기', '품목', '제조사', '거래처', '수량', '단가'],
+    I.pos.map(p => [p.due, `<strong>${esc(itemName(p.code))}</strong> <span class="code">${p.code}</span>`, makerCell(p.maker), esc(p.vendor), n0(p.qty), money(p)]), [0, 1, 2, 3]);
 }
 
 /* ---------- 차트 공통 ---------- */
@@ -628,7 +627,7 @@ function drawMarket() {
 
 /* ---------- 입고단가 ---------- */
 function drawPurchase() {
-  const C = colors(), R = DATA.purchase.receipts, S = snapshot();
+  const C = colors(), R = DATA.purchase.receipts;
   const since = code => (R[code] || []).filter(r => r.m >= MANAGED_FROM);
   const ours = since(DDR4_8GB), con = DATA.prices.ddr4_contract;
 
@@ -641,7 +640,7 @@ function drawPurchase() {
     ? `입고 <strong>${usd(lo.price)}</strong> (${lo.m}, ${n0(lo.qty)}개) · 계약가 <strong>${usd(lc.avg)}</strong> (${lc.d.slice(0, 7)})<br>계약가 대비 ${pct((lo.price / lc.avg - 1) * 100)}`
     : '';
 
-  const others = S.items.filter(it => it.managed && it.code !== DDR4_8GB);
+  const others = INV().items.filter(it => it.code !== DDR4_8GB);
   $('itemCharts').innerHTML = others.map(it => { const last = since(it.code).at(-1);
     return `<div class="card">
       <div class="card-head"><h2>${esc(it.name)}</h2><div class="meta">${last ? `최근 ${last.m} · <strong>${usd(last.price)}</strong> · ${n0(last.qty)}개` : '2025년 이후 입고 없음'}</div></div>
@@ -651,14 +650,12 @@ function drawPurchase() {
     lineChart('c-item-' + it.code, [{label: '당사 입고단가', color: C.ours, dots: true, points: since(it.code).map(r => ({x: mts(r.m), y: r.price}))}],
               {dateFmt: monthLabel, right: 62});
 
-  $('recentTable').innerHTML = table(['입고일', '품목', '수량', '단가(USD)', '로트'],
-    DATA.purchase.recent.map(r => [r.d, `<strong>${esc(itemName(r.code))}</strong> <span class="code">${r.code}</span>`, n0(r.qty), `<span class="num" style="font-size:14px">${usd(r.price)}</span>`, r.lot ? `<span class="badge b-slate">${esc(r.lot)}</span>` : '-']), [0, 1, 4]);
+  $('recentTable').innerHTML = table(['입고일', '품목', '제조사', '거래처', '수량', '단가(USD)'],
+    DATA.purchase.recent.map(r => [r.d, `<strong>${esc(itemName(r.code))}</strong> <span class="code">${r.code}</span>`, r.maker ? esc(r.maker) : r.needs_maker ? makerCell('미지정') : '-', esc(r.vendor), n0(r.qty), `<span class="num" style="font-size:14px">${usd(r.price)}</span>`]), [0, 1, 2, 3]);
   const Q = DATA.purchase.quotes;
   $('quoteTable').innerHTML = table(['구분', '스펙', '제조사', ...Q.months.map(m => m.slice(2).replace('-', '.'))],
     Q.rows.map(r => [esc(r.cat), esc(r.spec), esc(r.maker), ...r.p.map(v => v == null ? '' : usd(v))]), [0, 1, 2]);
-  const issues = DATA.purchase.issues || [];
-  $('purchaseAlerts').innerHTML = issues.length ? `<div class="notice"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>확인 필요</strong><ul>${issues.map(i =>
-    `<li>${esc(itemName(i.code))} (${i.code}): ${esc(i.msg)} (단가 열 기준으로 표시)</li>`).join('')}</ul></div></div>` : '';
+  $('purchaseAlerts').innerHTML = noticeHtml((DATA.purchase.issues || []).map(i => ({...i, msg: i.msg + ' (단가 열 기준으로 표시)'})));
 }
 
 /* ---------- 시장 동향 ---------- */
@@ -697,12 +694,11 @@ function setTheme(theme) {
 }
 
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-tab],[data-range],[data-snap],#themeBtn');
+  const t = e.target.closest('[data-tab],[data-range],#themeBtn');
   if (!t) return;
   if (t.id === 'themeBtn') return setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
   if (t.dataset.tab) { show(t.dataset.tab); scrollTo({top: 0}); }
   if (t.dataset.range) { range = t.dataset.range; drawMarket(); }
-  if (t.dataset.snap) { snapKey = t.dataset.snap; renderAll(); }
 });
 addEventListener('hashchange', () => {
   const hash = location.hash.slice(1);
@@ -714,7 +710,6 @@ fetch('data/dashboard.json?t=' + Date.now())
   .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
   .then(d => {
     DATA = d;
-    snapKey = d.inventory.confirmed ? 'confirmed' : 'pending';
     const hash = location.hash.slice(1);
     if (document.querySelector(`.tab[data-tab="${hash}"]`)) current = hash;
     renderAll();
