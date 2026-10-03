@@ -286,7 +286,7 @@ def build_snapshot(path):
     first = re.match(r"(\d+)월", months["ends"][0]) if months["ends"] else None
     if as_of and first and int(first.group(1)) != int(as_of[5:7]):
         issues.append(issue("warn", None, "month_label",
-                            f"기준일자는 {int(as_of[5:7])}월인데 월별과부족 첫 열은 {months['ends'][0]} — 월 표기 확인 필요"))
+                            f"기준일자는 {int(as_of[5:7])}월인데 월별과부족 첫 열은 {months['ends'][0]}입니다. 월 표기를 확인해 주세요"))
 
     order = {c: i for i, c in enumerate(MANAGED)}
     items.sort(key=lambda it: (not it["managed"], order.get(it["code"], 99)))

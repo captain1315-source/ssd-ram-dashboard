@@ -1,193 +1,329 @@
 <!doctype html>
-<html lang="ko">
+<html lang="ko" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow">
 <title>SSD·RAM 수급·시장 대시보드</title>
+<script>
+// 테마: 주소의 ?theme=dark|light 가 우선, 없으면 마지막 선택, 기본은 밝은 테마
+(function () {
+  var t = new URLSearchParams(location.search).get('theme');
+  try { t = t || localStorage.getItem('ssdram-theme'); } catch (e) {}
+  document.documentElement.dataset.theme = t === 'dark' ? 'dark' : 'light';
+})();
+</script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 <style>
+/* 모서리 규칙: 카드 12px, 배지 6px, 버튼·칩은 완전 둥글게 */
 :root {
   color-scheme: light;
-  --page: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink2: #52514e; --muted: #898781;
-  --grid: #e1e0d9; --axis: #c3c2b7; --border: rgba(11,11,11,.10);
+  --bg: #f1f5f9; --card: #ffffff; --head: #f8fafc; --border: #e2e8f0; --hover: #f8fafc;
+  --text: #1e293b; --sub: #64748b; --spark: #94a3b8;
+  --primary: #2563eb; --primary-solid: #2563eb; --primary-tint: rgba(37,99,235,.10);
+  --shadow: 0 1px 2px 0 rgba(0,0,0,.05);
   /* 계열색은 항목에 고정: DDR4 현물 / DDR5 현물 / NAND 현물 / 당사 입고단가 / 시장 계약가 */
-  --s-ddr4: #2a78d6; --s-ddr5: #eb6834; --s-nand: #1baf7a; --s-ours: #008300; --s-contract: #4a3aa7;
-  --warning: #fab219; --critical: #d03b3b;
-  --up: #d03b3b; --down: #006300;   /* 가격 상승은 구매 측에 불리 */
-  --tint-critical: rgba(208,59,59,.12); --tint-warning: rgba(250,178,25,.18);
+  --s-ddr4: #2563eb; --s-ddr5: #ea580c; --s-nand: #0d9488; --s-ours: #059669; --s-contract: #7c3aed;
+  --up: #dc2626; --down: #2563eb;
+  --crit-fg: #b91c1c; --crit-bg: #fee2e2; --crit-line: #ef4444; --crit-grad: linear-gradient(90deg, #fee2e2, rgba(254,226,226,0) 75%);
+  --seri-fg: #c2410c; --seri-bg: #ffedd5; --seri-line: #f97316; --seri-grad: linear-gradient(90deg, #ffedd5, rgba(255,237,213,0) 75%);
+  --warn-fg: #a16207; --warn-bg: #fef9c3; --warn-line: #fbbf24; --warn-grad: linear-gradient(90deg, #fef9c3, rgba(254,249,195,0) 75%);
+  --good-fg: #15803d; --good-bg: #dcfce7; --good-line: #22c55e;
+  --slate-fg: #475569; --slate-bg: #e2e8f0;
+  --notice-bg: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); --notice-border: #fcd34d; --notice-icon: #d97706;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
-    --page: #0d0d0d; --surface: #1a1a19; --ink: #ffffff; --ink2: #c3c2b7; --muted: #898781;
-    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,.10);
-    --s-ddr4: #3987e5; --s-ddr5: #d95926; --s-nand: #199e70; --s-ours: #008300; --s-contract: #9085e9;
-    --up: #e66767; --down: #0ca30c;
-    --tint-critical: rgba(208,59,59,.24); --tint-warning: rgba(250,178,25,.16);
-  }
+[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f172a; --card: #1e293b; --head: #172033; --border: #334155; --hover: #26334a;
+  --text: #f1f5f9; --sub: #94a3b8; --spark: #64748b;
+  --primary: #60a5fa; --primary-tint: rgba(96,165,250,.14);
+  --shadow: 0 1px 2px 0 rgba(0,0,0,.3);
+  --s-ddr4: #3b82f6; --s-ddr5: #ea580c; --s-nand: #0d9488; --s-ours: #059669; --s-contract: #8b5cf6;
+  --up: #f87171; --down: #60a5fa;
+  --crit-fg: #fca5a5; --crit-bg: rgba(153,27,27,.32); --crit-grad: linear-gradient(90deg, rgba(239,68,68,.16), rgba(239,68,68,.02));
+  --seri-fg: #fdba74; --seri-bg: rgba(154,52,18,.32); --seri-grad: linear-gradient(90deg, rgba(249,115,22,.16), rgba(249,115,22,.02));
+  --warn-fg: #fde047; --warn-bg: rgba(133,77,14,.32); --warn-grad: linear-gradient(90deg, rgba(234,179,8,.15), rgba(234,179,8,.02));
+  --good-fg: #86efac; --good-bg: rgba(22,101,52,.32);
+  --slate-fg: #cbd5e1; --slate-bg: rgba(71,85,105,.38);
+  --notice-bg: linear-gradient(135deg, rgba(234,179,8,.14), rgba(234,179,8,.05)); --notice-border: rgba(251,191,36,.5); --notice-icon: #fbbf24;
 }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif; }
-.wrap { max-width: 1180px; margin: 0 auto; padding: 16px; }
-header.top { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; margin-bottom: 10px; }
-h1 { font-size: 18px; font-weight: 650; margin: 0; }
-h2 { font-size: 14px; font-weight: 650; margin: 22px 0 8px; }
-h2:first-child { margin-top: 0; }
-.chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { font-size: 12px; color: var(--ink2); border: 1px solid var(--border); border-radius: 999px; padding: 2px 10px; background: var(--surface); }
-.chip.stale { border-color: var(--warning); }
-nav.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--grid); margin-bottom: 16px; overflow-x: auto; position: sticky; top: 0; background: var(--page); z-index: 5; }
-.tab { appearance: none; border: 0; background: none; font: inherit; color: var(--ink2); padding: 10px 12px; cursor: pointer; border-bottom: 2px solid transparent; white-space: nowrap; }
-.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
-.card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
-.card + .card { margin-top: 12px; }
-.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 10px; }
-.tile .label { font-size: 12px; color: var(--ink2); }
-.tile .value { font-size: 24px; font-weight: 650; line-height: 1.25; margin-top: 2px; }
-.tile .sub { font-size: 12px; color: var(--ink2); }
-.tile .name { font-weight: 650; margin-top: 6px; }
-.tile .spark { display: block; margin-top: 6px; }
-.code { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
-.delta.up { color: var(--up); font-weight: 600; }
-.delta.down { color: var(--down); font-weight: 600; }
-.status { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; }
-.badge { font-size: 11px; border: 1px solid var(--border); border-radius: 4px; padding: 0 6px; color: var(--ink2); white-space: nowrap; }
-.caption { font-size: 12px; color: var(--ink2); margin-top: 8px; }
-.alert { border: 1px solid var(--warning); background: var(--tint-warning); border-radius: 10px; padding: 12px 14px; margin-bottom: 14px; font-size: 13px; }
-.alert ul { margin: 6px 0 0; padding-left: 18px; }
-.alert .seg { margin-left: 8px; vertical-align: middle; }
+body { margin: 0; padding-bottom: 32px; background: var(--bg); color: var(--text);
+  font: 14px/1.5 "Pretendard Variable", Pretendard, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif; }
+button { font-family: inherit; }
+.in { max-width: 1180px; margin: 0 auto; }
+
+/* 상단 바 */
+.topbar { background: var(--card); border-bottom: 1px solid var(--border); }
+.topbar .in { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; padding: 10px 16px; min-height: 56px; }
+.brand { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 900; letter-spacing: -.01em; white-space: nowrap; }
+.brand i, .brand em { color: var(--primary); font-style: normal; }
+.brand { margin-right: auto; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+.chip { font-size: 12px; font-weight: 600; color: var(--sub); background: var(--bg); border: 1px solid var(--border); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+.chip.stale { color: var(--warn-fg); background: var(--warn-bg); border-color: transparent; }
+.icon-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); color: var(--sub); cursor: pointer; font-size: 15px; }
+.icon-btn:hover { background: var(--hover); color: var(--text); }
+.icon-btn:active, .pill:active { transform: scale(.97); }
+@media (max-width: 720px) {
+  .chips { order: 3; flex-basis: 100%; justify-content: flex-start; }
+}
+
+/* 탭 */
+.tabbar { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--border); box-shadow: var(--shadow); }
+.tabbar .in { display: flex; padding: 0 4px; overflow-x: auto; }
+.tab { appearance: none; height: 46px; padding: 0 16px; border: 0; border-bottom: 3px solid transparent; background: none; cursor: pointer;
+  font-size: 14.4px; font-weight: 600; color: var(--sub); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.tab:hover { color: var(--text); }
+.tab[aria-selected="true"] { color: var(--primary); border-bottom-color: var(--primary); }
+.count { background: #ef4444; color: #fff; font-size: 11px; font-weight: 900; line-height: 17px; min-width: 17px; padding: 0 5px; border-radius: 999px; text-align: center; }
+
+main.in { padding: 16px; }
+.stack > * + * { margin-top: 14px; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; align-items: start; }
+.cols.two { grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr)); }
+
+/* 카드 */
+.card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
+.card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.card-head h2 { margin: 0; font-size: 16px; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.card-head h2 i { color: var(--primary); font-size: 14px; }
+.card-head .meta { font-size: 12.5px; color: var(--sub); text-align: right; }
+.card-body { padding: 14px; }
+.more { appearance: none; border: 0; background: none; padding: 0; cursor: pointer; color: var(--primary); font-size: 13px; font-weight: 800; white-space: nowrap; }
+.caption { font-size: 12.5px; color: var(--sub); margin: 10px 0 0; }
+.card > .caption { padding: 0 14px 12px; }
+
+/* 순위형 목록 */
+.rank-list { list-style: none; margin: 0; padding: 0; }
+.rank { display: flex; align-items: center; gap: 12px; padding: 12px 14px 12px 12px; border-bottom: 1px solid var(--border); border-left: 5px solid transparent; }
+.rank:last-child { border-bottom: 0; }
+.rank.g-critical { border-left-color: var(--crit-line); background-image: var(--crit-grad); }
+.rank.g-serious { border-left-color: var(--seri-line); background-image: var(--seri-grad); }
+.rank.g-warning { border-left-color: var(--warn-line); background-image: var(--warn-grad); }
+.rank.g-good { border-left-color: var(--good-line); }
+.rank-main { flex: 1; min-width: 0; }
+.rank-name { font-size: 15px; font-weight: 700; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 6px; }
+.rank small { display: block; font-size: 12.5px; color: var(--sub); }
+.rank small.short { color: var(--crit-fg); font-weight: 600; }
+.rank-val { text-align: right; white-space: nowrap; }
+.num { font-size: 17px; font-weight: 800; color: var(--primary); font-variant-numeric: tabular-nums; line-height: 1.3; }
+.spark { flex: none; }
+.delta { font-weight: 700; }
+.delta.up { color: var(--up); }
+.delta.down { color: var(--down); }
+
+/* 배지 */
+.badge { display: inline-block; font-size: 12px; font-weight: 700; line-height: 1.5; padding: 3px 8px; border-radius: 6px; white-space: nowrap; }
+.badge.grade { min-width: 62px; text-align: center; }
+.b-critical { color: var(--crit-fg); background: var(--crit-bg); }
+.b-serious { color: var(--seri-fg); background: var(--seri-bg); }
+.b-warning { color: var(--warn-fg); background: var(--warn-bg); }
+.b-good { color: var(--good-fg); background: var(--good-bg); }
+.b-slate { color: var(--slate-fg); background: var(--slate-bg); }
+.b-blue { color: var(--primary); background: var(--primary-tint); }
+.code { font-size: 12px; font-weight: 500; color: var(--sub); font-variant-numeric: tabular-nums; }
+
+/* 알림 */
+.notice { display: flex; gap: 10px; border: 1px solid var(--notice-border); background: var(--notice-bg); border-radius: 12px; padding: 12px 14px; font-size: 13.5px; }
+.notice > i { color: var(--notice-icon); margin-top: 3px; }
+.notice strong { font-weight: 800; }
+.notice ul { margin: 6px 0 0; padding-left: 18px; }
+.notice .pills { margin: 8px 0 2px; }
+
+/* 알약 버튼 */
+.pills { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.pill { appearance: none; border: 1px solid var(--border); background: var(--card); color: var(--sub); font-size: 13px; font-weight: 700; padding: 6px 14px; border-radius: 999px; cursor: pointer; }
+.pill:hover { color: var(--text); }
+.pill[aria-pressed="true"] { background: var(--primary-solid); border-color: var(--primary-solid); color: #fff; }
+.filters { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 700; color: var(--sub); }
+
+/* 표 */
 .scroll { overflow-x: auto; }
-table { border-collapse: collapse; width: 100%; font-size: 13px; }
-th, td { padding: 6px 10px; border-bottom: 1px solid var(--grid); text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
-th { font-weight: 600; color: var(--ink2); font-size: 12px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th, td { padding: 9px 12px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); font-variant-numeric: tabular-nums; }
+th { background: var(--head); color: var(--sub); font-size: 12.5px; font-weight: 700; }
 th.l, td.l { text-align: left; }
-td.note { white-space: normal; min-width: 140px; color: var(--ink2); font-size: 12px; }
-tr.total td { font-weight: 650; }
-tr.lot td { color: var(--ink2); }
-td.neg { background: var(--tint-critical); font-weight: 650; color: var(--ink); }
-td.low { background: var(--tint-warning); }
-.chart-title { font-weight: 650; }
-.chart-sub { font-size: 12px; color: var(--ink2); margin-bottom: 6px; }
-.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink2); margin: 2px 0 6px; }
-.key i { display: inline-block; width: 14px; height: 2px; border-radius: 1px; vertical-align: middle; margin-right: 6px; }
-.plot { position: relative; height: 250px; }
-.plot.small { height: 170px; }
-.plot .empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--ink2); font-size: 12px; }
-details.tv { margin-top: 8px; font-size: 12px; }
-details.tv summary { cursor: pointer; color: var(--ink2); }
-details.tv .scroll { max-height: 280px; overflow: auto; margin-top: 6px; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background-color: var(--hover); }
+td.name { font-weight: 700; }
+td.note { white-space: normal; min-width: 150px; color: var(--sub); font-size: 12.5px; }
+tr.lot td { color: var(--sub); }
+tr.lot td.name { color: var(--text); }
+tr.total td { font-weight: 800; }
+td.neg, tbody tr:hover td.neg { background-color: var(--crit-bg); color: var(--crit-fg); font-weight: 800; }
+td.low, tbody tr:hover td.low { background-color: var(--warn-bg); color: var(--warn-fg); font-weight: 700; }
+
+/* 차트 */
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12.5px; font-weight: 600; color: var(--sub); margin-bottom: 8px; }
+.key i { display: inline-block; width: 14px; height: 3px; border-radius: 2px; vertical-align: middle; margin-right: 6px; }
+.plot { position: relative; height: 260px; }
+.plot.small { height: 180px; }
+.plot .empty { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--sub); font-size: 13px; }
+details.tv { margin-top: 10px; font-size: 13px; }
+details.tv summary { cursor: pointer; color: var(--primary); font-weight: 700; }
+details.tv .scroll { max-height: 300px; overflow: auto; margin-top: 8px; border: 1px solid var(--border); border-radius: 12px; }
 details.tv th { position: sticky; top: 0; }
-.filters { display: flex; gap: 8px; align-items: center; margin-bottom: 12px; font-size: 12px; color: var(--ink2); }
-.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface); }
-.seg button { appearance: none; border: 0; background: none; font: inherit; font-size: 12px; padding: 5px 10px; color: var(--ink2); cursor: pointer; }
-.seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
-.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; margin-top: 12px; }
-.grid2 .card + .card, .tiles .card + .card { margin-top: 0; }
-.trend h3 { font-size: 14px; margin: 0 0 8px; }
-.trend ul { margin: 0; padding-left: 18px; }
-.trend li { margin-bottom: 8px; }
-.trend .kind { font-size: 11px; font-weight: 600; border: 1px solid var(--border); border-radius: 4px; padding: 0 6px; margin-right: 6px; color: var(--ink2); }
-.trend .src { font-size: 12px; }
-a { color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+
+/* 시장 동향 */
+.trend-list { list-style: none; margin: 0; padding: 0; }
+.trend-list li { display: flex; gap: 10px; padding: 12px 14px; border-bottom: 1px solid var(--border); }
+.trend-list li:last-child { border-bottom: 0; }
+.trend-list .badge { flex: none; align-self: flex-start; min-width: 52px; text-align: center; }
+.src { font-size: 12.5px; color: var(--sub); }
+a { color: var(--primary); text-decoration: none; font-weight: 600; }
+a:hover { text-decoration: underline; }
+[hidden] { display: none !important; }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header class="top">
-    <h1>SSD·RAM 수급·시장 대시보드</h1>
+<header class="topbar">
+  <div class="in">
+    <div class="brand"><i class="fa-solid fa-microchip"></i><span>SSD·RAM <em>수급·시장</em></span></div>
     <div class="chips" id="chips"></div>
-  </header>
+    <button class="icon-btn" id="themeBtn" aria-label="밝은 테마와 어두운 테마 전환"><i class="fa-solid fa-moon"></i></button>
+  </div>
+</header>
 
-  <nav class="tabs" role="tablist" aria-label="대시보드 영역">
+<nav class="tabbar" aria-label="대시보드 영역">
+  <div class="in" role="tablist">
     <button class="tab" role="tab" data-tab="summary">요약</button>
     <button class="tab" role="tab" data-tab="market">시장가 추이</button>
-    <button class="tab" role="tab" data-tab="inventory">재고·과부족</button>
+    <button class="tab" role="tab" data-tab="inventory">재고·과부족<span class="count" id="riskCount" hidden></span></button>
     <button class="tab" role="tab" data-tab="purchase">입고단가</button>
     <button class="tab" role="tab" data-tab="trend">시장 동향</button>
-  </nav>
+  </div>
+</nav>
 
-  <section class="panel" id="p-summary" role="tabpanel">
-    <div class="alerts"></div>
-    <h2>품목 리스크</h2>
-    <div class="tiles" id="riskTiles"></div>
-    <p class="caption">등급은 월별 과부족의 최초 부족 전환 시점으로 계산합니다: 3개월 이내 🔴 · 4~5개월 🟠 · 6개월째 또는 그 직후 🟡.</p>
-    <h2>시장가</h2>
-    <div class="tiles" id="priceTiles"></div>
-    <h2>금주 요지</h2>
-    <div class="card" id="headline"></div>
+<main class="in">
+  <section class="panel stack" id="p-summary" role="tabpanel">
+    <div class="alerts stack"></div>
+    <div class="cols">
+      <div class="card">
+        <div class="card-head">
+          <h2><i class="fa-solid fa-flag"></i>품목 리스크</h2>
+          <button class="more" data-tab="inventory">재고·과부족 보기 <i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <ol class="rank-list" id="riskList"></ol>
+        <p class="caption">최초 부족 전환 시점 기준입니다. 3개월 이내 <span class="badge b-critical">위험</span> 4~5개월 <span class="badge b-serious">발주 필요</span> 6개월째 또는 그 직후 <span class="badge b-warning">모니터링</span></p>
+      </div>
+      <div class="card">
+        <div class="card-head">
+          <h2><i class="fa-solid fa-chart-line"></i>시장가</h2>
+          <button class="more" data-tab="market">추이 보기 <i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+        <ol class="rank-list" id="priceList"></ol>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h2><i class="fa-solid fa-newspaper"></i>금주 요지</h2>
+        <button class="more" data-tab="trend">시장 동향 보기 <i class="fa-solid fa-chevron-right"></i></button>
+      </div>
+      <div class="card-body" id="headline"></div>
+    </div>
   </section>
 
-  <section class="panel" id="p-market" role="tabpanel" hidden>
+  <section class="panel stack" id="p-market" role="tabpanel" hidden>
     <div class="filters">
       <span>기간</span>
-      <span class="seg" id="rangeSeg">
-        <button data-range="all">전체</button>
-        <button data-range="180">6개월</button>
-        <button data-range="90">3개월</button>
-        <button data-range="30">1개월</button>
+      <span class="pills" id="rangeSeg">
+        <button class="pill" data-range="all">전체</button>
+        <button class="pill" data-range="180">6개월</button>
+        <button class="pill" data-range="90">3개월</button>
+        <button class="pill" data-range="30">1개월</button>
       </span>
     </div>
     <div class="card">
-      <div class="chart-title">DRAM 현물가 — GB당 USD</div>
-      <div class="chart-sub">Session Average 기준. DDR4 8Gb = 1GB, DDR5 16Gb = 2GB로 환산</div>
-      <div class="legend" id="c-dram-legend"></div>
-      <div class="plot"><canvas id="c-dram" aria-label="DRAM 현물가 GB당 추이"></canvas></div>
-      <details class="tv"><summary>표로 보기 (환산 전 원 시세)</summary><div class="scroll" id="c-dram-table"></div></details>
+      <div class="card-head">
+        <h2><i class="fa-solid fa-memory"></i>DRAM 현물가 (GB당 USD)</h2>
+        <div class="meta">Session Average 기준<br>DDR4 8Gb = 1GB, DDR5 16Gb = 2GB로 환산</div>
+      </div>
+      <div class="card-body">
+        <div class="legend" id="c-dram-legend"></div>
+        <div class="plot"><canvas id="c-dram" aria-label="DRAM 현물가 GB당 추이"></canvas></div>
+        <details class="tv"><summary>표로 보기 (환산 전 원 시세)</summary><div class="scroll" id="c-dram-table"></div></details>
+      </div>
     </div>
     <div class="card">
-      <div class="chart-title">NAND 웨이퍼 현물가 — 512Gb TLC, USD</div>
-      <div class="chart-sub">Session Average 기준 (주 1회 갱신)</div>
-      <div class="plot"><canvas id="c-nand" aria-label="NAND 웨이퍼 현물가 추이"></canvas></div>
-      <details class="tv"><summary>표로 보기</summary><div class="scroll" id="c-nand-table"></div></details>
+      <div class="card-head">
+        <h2><i class="fa-solid fa-hard-drive"></i>NAND 웨이퍼 현물가 (512Gb TLC, USD)</h2>
+        <div class="meta">Session Average 기준, 주 1회 갱신</div>
+      </div>
+      <div class="card-body">
+        <div class="plot"><canvas id="c-nand" aria-label="NAND 웨이퍼 현물가 추이"></canvas></div>
+        <details class="tv"><summary>표로 보기</summary><div class="scroll" id="c-nand-table"></div></details>
+      </div>
     </div>
     <div class="card">
-      <div class="chart-title">DDR4 8GB SO-DIMM 계약가 — USD/모듈</div>
-      <div class="chart-sub">월 평균(Average), 옅은 띠는 High~Low 범위. 공개 보도로 확인된 월만 표시</div>
-      <div class="plot"><canvas id="c-contract" aria-label="DDR4 8GB 계약가 추이"></canvas></div>
-      <details class="tv"><summary>표로 보기 (DDR5 16GB 포함)</summary><div class="scroll" id="c-contract-table"></div></details>
+      <div class="card-head">
+        <h2><i class="fa-solid fa-file-contract"></i>DDR4 8GB SO-DIMM 계약가 (USD/모듈)</h2>
+        <div class="meta">월 평균, 옅은 띠는 High~Low 범위<br>공개 보도로 확인된 월만 표시</div>
+      </div>
+      <div class="card-body">
+        <div class="plot"><canvas id="c-contract" aria-label="DDR4 8GB 계약가 추이"></canvas></div>
+        <details class="tv"><summary>표로 보기 (DDR5 16GB 포함)</summary><div class="scroll" id="c-contract-table"></div></details>
+      </div>
     </div>
   </section>
 
-  <section class="panel" id="p-inventory" role="tabpanel" hidden>
-    <div class="alerts"></div>
-    <h2>제조사별 재고 현황</h2>
-    <div class="card"><div class="scroll" id="stockTable"></div></div>
-    <h2>월별 과부족 현황</h2>
+  <section class="panel stack" id="p-inventory" role="tabpanel" hidden>
+    <div class="alerts stack"></div>
     <div class="card">
+      <div class="card-head">
+        <h2><i class="fa-solid fa-boxes-stacked"></i>제조사별 재고 현황</h2>
+        <div class="meta" id="stockMeta"></div>
+      </div>
+      <div class="scroll" id="stockTable"></div>
+    </div>
+    <div class="card">
+      <div class="card-head">
+        <h2><i class="fa-solid fa-calendar-days"></i>월별 과부족 현황</h2>
+        <div class="meta">월말재고 기준</div>
+      </div>
       <div class="scroll" id="balanceTable"></div>
-      <p class="caption">월말재고 기준. 붉은 칸은 부족(마이너스), 노란 칸은 다음 달 소진 예상입니다. 칸에 마우스를 올리면 그 달 소요가 보입니다.</p>
+      <p class="caption">붉은 칸은 부족(마이너스), 노란 칸은 다음 달 소진 예상입니다. 칸에 마우스를 올리면 그 달 소요가 보입니다.</p>
     </div>
     <div id="othersBlock"></div>
   </section>
 
-  <section class="panel" id="p-purchase" role="tabpanel" hidden>
+  <section class="panel stack" id="p-purchase" role="tabpanel" hidden>
     <div id="purchaseAlerts"></div>
     <div class="card">
-      <div class="chart-title">DDR4 8GB 모듈 — 당사 입고단가 vs 시장 계약가 (USD)</div>
-      <div class="chart-sub" id="c-ours-sub"></div>
-      <div class="legend" id="c-ours-legend"></div>
-      <div class="plot"><canvas id="c-ours" aria-label="DDR4 8GB 입고단가와 시장 계약가 비교"></canvas></div>
-      <p class="caption">입고단가는 입고이력의 월 가중평균(USD)입니다. 계약가는 TrendForce PC DRAM 모듈 계약가(공개 보도 기준)로 당사 품목과 세그먼트·조건이 달라 방향성 참고용입니다.</p>
+      <div class="card-head">
+        <h2><i class="fa-solid fa-scale-balanced"></i>DDR4 8GB 모듈: 당사 입고단가 vs 시장 계약가</h2>
+        <div class="meta" id="c-ours-sub"></div>
+      </div>
+      <div class="card-body">
+        <div class="legend" id="c-ours-legend"></div>
+        <div class="plot"><canvas id="c-ours" aria-label="DDR4 8GB 입고단가와 시장 계약가 비교"></canvas></div>
+        <p class="caption">입고단가는 입고이력의 월 가중평균(USD)입니다. 계약가는 TrendForce PC DRAM 모듈 계약가(공개 보도 기준)로 당사 품목과 세그먼트·조건이 달라 방향성 참고용입니다.</p>
+      </div>
     </div>
-    <h2>품목별 입고단가 추이 (2025년 1월 이후, 월 가중평균 USD)</h2>
-    <div class="grid2" id="itemCharts"></div>
-    <h2>최근 입고</h2>
-    <div class="card"><div class="scroll" id="recentTable"></div></div>
-    <h2>공급사별 단가 (참고)</h2>
-    <div class="card"><details class="tv" style="margin-top:0"><summary>단가현황(참고) 시트 전체 보기</summary><div class="scroll" id="quoteTable"></div></details></div>
+    <div class="cols two" id="itemCharts"></div>
+    <div class="card">
+      <div class="card-head"><h2><i class="fa-solid fa-truck-ramp-box"></i>최근 입고</h2><div class="meta">관리 품목, USD 입고분</div></div>
+      <div class="scroll" id="recentTable"></div>
+    </div>
+    <div class="card">
+      <div class="card-head"><h2><i class="fa-solid fa-tags"></i>공급사별 단가 (참고)</h2><div class="meta">단가현황(참고) 시트</div></div>
+      <div class="card-body"><details class="tv" style="margin-top:0"><summary>전체 표 펼치기</summary><div class="scroll" id="quoteTable"></div></details></div>
+    </div>
   </section>
 
-  <section class="panel trend" id="p-trend" role="tabpanel" hidden>
-    <div id="trendBody"></div>
-  </section>
-</div>
+  <section class="panel stack" id="p-trend" role="tabpanel" hidden></section>
+</main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
 const MANAGED_FROM = '2025-01';
 const DDR4_8GB = 'JK51-10012B';
-const GRADE = {critical: ['🔴', '위험'], serious: ['🟠', '발주 필요'], warning: ['🟡', '모니터링'], good: ['🟢', '정상']};
-const FONT = 'system-ui, -apple-system, "Segoe UI", "Malgun Gothic", sans-serif';
+const GRADE = {critical: '위험', serious: '발주 필요', warning: '모니터링', good: '정상'};
+const GRADE_ORDER = ['critical', 'serious', 'warning', 'good'];
+const KIND_BADGE = {'계약가': 'b-blue', '현물가': 'b-good', '구조': 'b-slate'};
+const FONT = '"Pretendard Variable", Pretendard, "Malgun Gothic", sans-serif';
+const THEME_KEY = 'ssdram-theme';
 
 let DATA, snapKey, range = 'all', current = 'summary';
 const charts = {};
@@ -195,8 +331,8 @@ const charts = {};
 const $ = id => document.getElementById(id);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const rich = s => esc(s).replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
-const n0 = v => v == null ? '–' : Math.round(v).toLocaleString('ko-KR');
-const usd = v => v == null ? '–' : '$' + Number(v).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+const n0 = v => v == null ? '-' : Math.round(v).toLocaleString('ko-KR');
+const usd = v => v == null ? '-' : '$' + Number(v).toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
 const pct = v => (v > 0 ? '+' : '') + v.toFixed(1) + '%';
 const ts = d => Date.parse(d + 'T00:00:00Z');
 const mts = m => Date.parse(m + '-01T00:00:00Z');
@@ -206,44 +342,49 @@ const alpha = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba($
 
 function colors() {
   const cs = getComputedStyle(document.documentElement), v = n => cs.getPropertyValue(n).trim();
-  return {surface: v('--surface'), ink: v('--ink'), ink2: v('--ink2'), muted: v('--muted'), grid: v('--grid'), axis: v('--axis'),
+  return {surface: v('--card'), ink: v('--text'), sub: v('--sub'), grid: v('--border'),
           ddr4: v('--s-ddr4'), ddr5: v('--s-ddr5'), nand: v('--s-nand'), ours: v('--s-ours'), contract: v('--s-contract')};
 }
 
 function snapshot() { const inv = DATA.inventory; return inv[snapKey] || inv.confirmed || inv.pending; }
 function itemName(code) { const it = snapshot().items.find(i => i.code === code); return it ? it.name : code; }
-function statusHtml(grade) { const [icon, label] = GRADE[grade]; return `<span class="status">${icon} ${label}</span>`; }
+const gradeBadge = g => `<span class="badge grade b-${g}">${GRADE[g]}</span>`;
+const nameCell = it => `${esc(it.name)} <span class="code">${it.code}</span>`;
 
-/* ---------- 헤더 ---------- */
+/* ---------- 상단 ---------- */
 function renderChips() {
   const S = snapshot(), spot = DATA.prices.ddr4_spot.at(-1);
   const days = Math.floor((Date.now() - ts(S.as_of)) / 864e5);
   const stale = days > 10;
   $('chips').innerHTML = [
-    `<span class="chip">시세 기준 ${spot.d}</span>`,
-    `<span class="chip${stale ? ' stale' : ''}">${stale ? '⚠️ ' : ''}재고 기준 ${S.as_of} · ${days}일 전</span>`,
-    DATA.market ? `<span class="chip">시장 동향 ${DATA.market.updated}</span>` : '',
+    `<span class="chip">시세 ${spot.d}</span>`,
+    `<span class="chip${stale ? ' stale' : ''}">${stale ? '<i class="fa-solid fa-triangle-exclamation"></i> ' : ''}재고 ${S.as_of} · ${days}일 전</span>`,
+    DATA.market ? `<span class="chip">동향 ${DATA.market.updated}</span>` : '',
   ].join('');
+  const risky = S.items.filter(it => it.managed && (it.grade === 'critical' || it.grade === 'serious')).length;
+  $('riskCount').hidden = !risky;
+  $('riskCount').textContent = risky;
 }
 
 /* ---------- 정합성 알림 ---------- */
 function renderAlerts() {
   const inv = DATA.inventory, p = inv.pending, c = inv.confirmed, S = snapshot();
   const line = i => `<li>${i.code ? `${esc(itemName(i.code))} (${i.code}): ` : ''}${esc(i.msg)}</li>`;
+  const box = (title, body) => `<div class="notice"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>${title}</strong>${body}</div></div>`;
   let html = '';
   if (p) {
     const errs = p.validation.issues.filter(i => i.level === 'error');
     const head = c
       ? `최신 입력본(기준일 ${p.as_of})이 정합성 검사를 통과하지 못해 확정본(기준일 ${c.as_of})을 유지합니다.`
       : `최신 입력본(기준일 ${p.as_of})이 정합성 검사를 통과하지 못했습니다. 확정본이 아직 없어 입력본 수치를 그대로 표시합니다.`;
-    const toggle = c ? `<span class="seg">
-        <button data-snap="confirmed" aria-pressed="${snapKey === 'confirmed'}">확정본</button>
-        <button data-snap="pending" aria-pressed="${snapKey === 'pending'}">최신 입력본(미검증)</button></span>` : '';
-    html += `<div class="alert"><strong>⚠️ 재고 수치 미확정</strong> — ${head}${toggle}<ul>${errs.map(line).join('')}</ul></div>`;
+    const toggle = c ? `<div class="pills">
+        <button class="pill" data-snap="confirmed" aria-pressed="${snapKey === 'confirmed'}">확정본</button>
+        <button class="pill" data-snap="pending" aria-pressed="${snapKey === 'pending'}">최신 입력본(미검증)</button></div>` : '';
+    html += box('재고 수치 미확정', `<div>${head}</div>${toggle}<ul>${errs.map(line).join('')}</ul>`);
   }
   const warns = S.validation.issues.filter(i => i.level === 'warn');
-  if (warns.length) html += `<div class="alert"><strong>확인 필요</strong><ul>${warns.map(line).join('')}</ul></div>`;
-  document.querySelectorAll('.alerts').forEach(el => el.innerHTML = html);
+  if (warns.length) html += box('확인 필요', `<ul>${warns.map(line).join('')}</ul>`);
+  document.querySelectorAll('.alerts').forEach(el => { el.innerHTML = html; el.hidden = !html; });
 }
 
 /* ---------- 요약 ---------- */
@@ -271,81 +412,81 @@ function deltaHtml(cur, prev, label) {
 function spark(series, colorVar) {
   const pts = series.slice(-40).map(p => p.avg);
   if (pts.length < 2) return '';
-  const w = 120, h = 32, pad = 5, min = Math.min(...pts), max = Math.max(...pts), span = (max - min) || 1;
+  const w = 96, h = 32, pad = 5, min = Math.min(...pts), max = Math.max(...pts), span = (max - min) || 1;
   const xy = pts.map((v, i) => [pad + i * (w - 2 * pad) / (pts.length - 1), h - pad - (v - min) * (h - 2 * pad) / span]);
   const [ex, ey] = xy.at(-1);
   return `<svg class="spark" viewBox="0 0 ${w} ${h}" width="${w}" height="${h}" aria-hidden="true">
-    <polyline points="${xy.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="var(--axis)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
-    <circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="3.5" fill="var(${colorVar})" stroke="var(--surface)" stroke-width="2"/></svg>`;
+    <polyline points="${xy.map(p => p.map(n => n.toFixed(1)).join(',')).join(' ')}" fill="none" stroke="var(--spark)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+    <circle cx="${ex.toFixed(1)}" cy="${ey.toFixed(1)}" r="3.5" fill="var(${colorVar})" stroke="var(--card)" stroke-width="2"/></svg>`;
 }
 
 function renderSummary() {
   const S = snapshot(), P = DATA.prices;
-  $('riskTiles').innerHTML = S.items.filter(it => it.managed).map(it => `
-    <div class="card tile">
-      ${statusHtml(it.grade)}
-      <div class="name">${esc(it.name)}</div>
-      <div class="code">${it.code}</div>
-      <div class="sub" style="margin-top:6px">현재고 <strong>${n0(it.stock_total)}</strong></div>
-      <div class="sub">${shortText(it, S.months)}</div>
-      ${it.single_source ? '<div style="margin-top:6px"><span class="badge">단일 공급사</span></div>' : ''}
-    </div>`).join('');
+  const managed = S.items.filter(it => it.managed).sort((a, b) => GRADE_ORDER.indexOf(a.grade) - GRADE_ORDER.indexOf(b.grade));
+  $('riskList').innerHTML = managed.map(it => `
+    <li class="rank g-${it.grade}">
+      ${gradeBadge(it.grade)}
+      <div class="rank-main">
+        <div class="rank-name">${esc(it.name)}${it.single_source ? ' <span class="badge b-slate">단일 공급사</span>' : ''}</div>
+        <small class="${it.short_idx != null ? 'short' : ''}">${shortText(it, S.months)}</small>
+        <small>${it.code}</small>
+      </div>
+      <div class="rank-val"><div class="num">${n0(it.stock_total)}</div><small>현재고</small></div>
+    </li>`).join('');
 
-  const tile = (label, series, colorVar, sub, vs = '전월말 대비') => {
+  const row = (name, spec, series, colorVar, vs = '전월말 대비', note = '') => {
     const last = series.at(-1);
-    return `<div class="card tile">
-      <div class="label">${label}</div>
-      <div class="value">${usd(last.avg)}</div>
-      <div class="sub">${deltaHtml(last.avg, prevMonthEnd(series)?.avg, vs)}</div>
-      <div class="sub">${sub(last)}</div>
+    return `<li class="rank" style="border-left-color: var(${colorVar})">
+      <div class="rank-main"><div class="rank-name">${name}</div><small>${spec}</small><small>${last.d.slice(0, note ? 7 : 10)} 기준${note}</small></div>
       ${spark(series, colorVar)}
-    </div>`;
+      <div class="rank-val"><div class="num">${usd(last.avg)}</div><small>${deltaHtml(last.avg, prevMonthEnd(series)?.avg, vs)}</small></div>
+    </li>`;
   };
   const contractAge = Math.floor((ts(P.ddr4_spot.at(-1).d) - ts(P.ddr4_contract.at(-1).d)) / 864e5);
-  $('priceTiles').innerHTML = [
-    tile('DDR4 현물 · 8Gb (1Gx8) 3200', P.ddr4_spot, '--s-ddr4', l => `${l.d} 기준`),
-    tile('DDR5 현물 · 16Gb (2Gx8)', P.ddr5_spot, '--s-ddr5', l => `${l.d} 기준`),
-    tile('NAND 현물 · 512Gb TLC 웨이퍼', P.nand_spot, '--s-nand', l => `${l.d} 기준`),
-    tile('DDR4 8GB SO-DIMM 계약가', P.ddr4_contract, '--s-contract',
-         l => `${l.d.slice(0, 7)} 기준${contractAge > 45 ? ' · 이후 미확인' : ''}`, '직전 확인월 대비'),
+  $('priceList').innerHTML = [
+    row('DDR4 현물', '8Gb (1Gx8) 3200', P.ddr4_spot, '--s-ddr4'),
+    row('DDR5 현물', '16Gb (2Gx8) 4800/5600', P.ddr5_spot, '--s-ddr5'),
+    row('NAND 현물', '512Gb TLC 웨이퍼', P.nand_spot, '--s-nand'),
+    row('DDR4 계약가', '8GB SO-DIMM 모듈', P.ddr4_contract, '--s-contract', '직전 확인월 대비', contractAge > 45 ? ', 이후 미확인' : ' '),
   ].join('');
 
   const M = DATA.market;
   $('headline').innerHTML = M
-    ? `<div>${rich(M.headline)}</div><div class="caption">${esc(M.week)} · ${M.updated} 리서치 · 자세한 내용은 ‘시장 동향’ 탭</div>`
-    : '<div class="caption">시장 동향 데이터가 없습니다.</div>';
+    ? `<div>${rich(M.headline)}</div><p class="caption">${esc(M.week)} · ${M.updated} 리서치</p>`
+    : '<p class="caption" style="margin:0">시장 동향 데이터가 없습니다.</p>';
 }
 
 /* ---------- 재고·과부족 ---------- */
 function renderInventory() {
   const S = snapshot(), managed = S.items.filter(it => it.managed), notes = DATA.market?.item_notes || {};
-  const nameCell = it => `<strong>${esc(it.name)}</strong> <span class="code">${it.code}</span>`;
+  $('stockMeta').textContent = `기준일자 ${S.as_of} · ${S.source}`;
 
   $('stockTable').innerHTML = `<table>
     <thead><tr><th class="l">품목</th>${S.suppliers.map(s => `<th>${esc(s)}</th>`).join('')}<th>재고 합계</th><th class="l">리스크</th></tr></thead>
     <tbody>${managed.map(it => `<tr>
-      <td class="l">${nameCell(it)}${it.single_source ? ' <span class="badge">단일 공급사</span>' : ''}</td>
-      ${S.suppliers.map(s => `<td>${it.by_supplier?.[s] ? n0(it.by_supplier[s]) : '–'}</td>`).join('')}
-      <td><strong>${n0(it.stock_total)}</strong></td><td class="l">${statusHtml(it.grade)}</td></tr>`).join('')}</tbody></table>
-    <p class="caption">재고현황 시트 기준 (기준일자 ${S.as_of}, ${esc(S.source)})</p>`;
+      <td class="l name">${nameCell(it)}${it.single_source ? ' <span class="badge b-slate">단일 공급사</span>' : ''}</td>
+      ${S.suppliers.map(s => `<td>${it.by_supplier?.[s] ? n0(it.by_supplier[s]) : '-'}</td>`).join('')}
+      <td><span class="num" style="font-size:14.5px">${n0(it.stock_total)}</span></td><td class="l">${gradeBadge(it.grade)}</td></tr>`).join('')}</tbody></table>`;
 
-  const cells = (l, lowLast) => `<td>${n0(l.open)}</td><td>${l.incoming ? n0(l.incoming) : '–'}</td>` +
+  const cells = (l, lowLast) => `<td>${n0(l.open)}</td><td>${l.incoming ? n0(l.incoming) : '-'}</td>` +
     l.end.map((v, k) => `<td class="${v < 0 ? 'neg' : lowLast && k === l.end.length - 1 ? 'low' : ''}" title="소요 ${n0(l.demand[k])}">${n0(v)}</td>`).join('');
   const rows = it => {
     const note = [it.note, notes[it.code]].filter(Boolean).map(esc).join(' · ');
     const lowLast = it.grade === 'warning' && it.short_idx == null;
     if (it.lots.length === 1)
-      return `<tr><td class="l">${nameCell(it)}</td><td class="l">–</td>${cells(it.lots[0], lowLast)}<td class="l">${statusHtml(it.grade)}</td><td class="l note">${note}</td></tr>`;
-    return it.lots.map((l, k) => `<tr class="lot"><td class="l">${k ? '' : nameCell(it)}</td><td class="l">${esc(l.label)}</td>${cells(l, false)}<td></td><td></td></tr>`).join('') +
-      `<tr class="total"><td class="l"></td><td class="l">합계</td>${cells(it.total, lowLast)}<td class="l">${statusHtml(it.grade)}</td><td class="l note">${note}</td></tr>`;
+      return `<tr><td class="l name">${nameCell(it)}</td><td class="l">-</td>${cells(it.lots[0], lowLast)}<td class="l">${gradeBadge(it.grade)}</td><td class="l note">${note}</td></tr>`;
+    return it.lots.map((l, k) => `<tr class="lot"><td class="l name">${k ? '' : nameCell(it)}</td><td class="l">${esc(l.label)}</td>${cells(l, false)}<td></td><td></td></tr>`).join('') +
+      `<tr class="total"><td class="l"></td><td class="l">합계</td>${cells(it.total, lowLast)}<td class="l">${gradeBadge(it.grade)}</td><td class="l note">${note}</td></tr>`;
   };
   const head = `<thead><tr><th class="l">품목</th><th class="l">로트</th><th>${esc(S.months.open)}</th><th>입고대기</th>${S.months.ends.map(m => `<th>${esc(m)}</th>`).join('')}<th class="l">리스크</th><th class="l">비고</th></tr></thead>`;
   $('balanceTable').innerHTML = `<table>${head}<tbody>${managed.map(rows).join('')}</tbody></table>`;
 
   const others = S.items.filter(it => !it.managed && it.total.end.some(v => v < 0));
-  $('othersBlock').innerHTML = others.length ? `<h2>기타 품목 중 부족 예상 (비관리)</h2><div class="card"><div class="scroll"><table>
+  $('othersBlock').innerHTML = others.length ? `<div class="card">
+    <div class="card-head"><h2><i class="fa-solid fa-circle-exclamation"></i>기타 품목 중 부족 예상</h2><div class="meta">관리 5종 외</div></div>
+    <div class="scroll"><table>
     <thead><tr><th class="l">품목</th><th>${esc(S.months.open)}</th>${S.months.ends.map(m => `<th>${esc(m)}</th>`).join('')}</tr></thead>
-    <tbody>${others.map(it => `<tr><td class="l">${nameCell(it)}</td><td>${n0(it.total.open)}</td>${it.total.end.map(v => `<td class="${v < 0 ? 'neg' : ''}">${n0(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>` : '';
+    <tbody>${others.map(it => `<tr><td class="l name">${nameCell(it)}</td><td>${n0(it.total.open)}</td>${it.total.end.map(v => `<td class="${v < 0 ? 'neg' : ''}">${n0(v)}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>` : '';
 }
 
 /* ---------- 차트 공통 ---------- */
@@ -354,7 +495,7 @@ const crosshair = C => ({id: 'crosshair', beforeDatasetsDraw(chart) {
   if (!el) return;
   const {top, bottom} = chart.chartArea, ctx = chart.ctx;
   ctx.save(); ctx.beginPath(); ctx.moveTo(el.element.x, top); ctx.lineTo(el.element.x, bottom);
-  ctx.lineWidth = 1; ctx.strokeStyle = C.axis; ctx.stroke(); ctx.restore();
+  ctx.lineWidth = 1; ctx.strokeStyle = C.sub; ctx.stroke(); ctx.restore();
 }});
 
 // 선 끝에만 값을 붙인다. 서로 겹치면 뒤의 것은 생략하고 범례·툴팁에 맡긴다.
@@ -370,7 +511,7 @@ const endLabels = C => ({id: 'endLabels', afterDatasetsDraw(chart) {
       break;
     }
   });
-  ctx.save(); ctx.font = `600 12px ${FONT}`; ctx.fillStyle = C.ink; ctx.textBaseline = 'middle';
+  ctx.save(); ctx.font = `700 12px ${FONT}`; ctx.fillStyle = C.ink; ctx.textBaseline = 'middle';
   const drawn = [];
   for (const l of labels.sort((a, b) => a.y - b.y)) {
     const atEdge = l.x >= right - 2;
@@ -394,7 +535,7 @@ function axisTicks(min, max) {
 }
 
 /* series: [{label, short, color, dots, band, points: [{x, y, hi, lo}]}] */
-function lineChart(id, series, {dateFmt = fullDate, right = 88} = {}) {
+function lineChart(id, series, {dateFmt = fullDate, right = 92} = {}) {
   const C = colors(), canvas = $(id), plot = canvas.parentElement;
   charts[id]?.destroy(); delete charts[id];
   plot.querySelector('.empty')?.remove();
@@ -410,7 +551,7 @@ function lineChart(id, series, {dateFmt = fullDate, right = 88} = {}) {
     const quiet = {band: true, borderWidth: 0, pointRadius: 0, pointHoverRadius: 0, spanGaps: true};
     if (s.band) {
       datasets.push({...quiet, label: 'low', data: xs.map(x => ({x, y: at.get(x)?.lo ?? null})), fill: false});
-      datasets.push({...quiet, label: 'high', data: xs.map(x => ({x, y: at.get(x)?.hi ?? null})), fill: '-1', backgroundColor: alpha(s.color, .10)});
+      datasets.push({...quiet, label: 'high', data: xs.map(x => ({x, y: at.get(x)?.hi ?? null})), fill: '-1', backgroundColor: alpha(s.color, .12)});
     }
     datasets.push({
       label: s.label, short: s.short || s.label,
@@ -428,17 +569,17 @@ function lineChart(id, series, {dateFmt = fullDate, right = 88} = {}) {
     layout: {padding: {right, top: 18}},
     interaction: {mode: 'index', intersect: false},
     scales: {
-      x: {type: 'linear', min: xs[0], max: xs.at(-1), grid: {display: false}, border: {color: C.axis},
-          ticks: {color: C.muted, font: {size: 11, family: FONT}, maxRotation: 0, autoSkip: true, autoSkipPadding: 18, callback: v => ax.fmt(v)},
+      x: {type: 'linear', min: xs[0], max: xs.at(-1), grid: {display: false}, border: {color: C.grid},
+          ticks: {color: C.sub, font: {size: 11.5, family: FONT}, maxRotation: 0, autoSkip: true, autoSkipPadding: 18, callback: v => ax.fmt(v)},
           afterBuildTicks: sc => { sc.ticks = ax.ticks.map(value => ({value})); }},
       y: {grace: '8%', grid: {color: C.grid}, border: {display: false},
-          ticks: {color: C.muted, font: {size: 11, family: FONT}, maxTicksLimit: 6, callback: v => '$' + v}},
+          ticks: {color: C.sub, font: {size: 11.5, family: FONT}, maxTicksLimit: 6, callback: v => '$' + v}},
     },
     plugins: {
       legend: {display: false},
       tooltip: {
-        backgroundColor: C.surface, titleColor: C.ink, bodyColor: C.ink2, borderColor: C.axis, borderWidth: 1, padding: 10,
-        usePointStyle: true, boxWidth: 8, boxHeight: 8, titleFont: {size: 12, family: FONT}, bodyFont: {size: 12, family: FONT},
+        backgroundColor: C.surface, titleColor: C.ink, bodyColor: C.sub, borderColor: C.grid, borderWidth: 1, padding: 10, cornerRadius: 8,
+        usePointStyle: true, boxWidth: 8, boxHeight: 8, titleFont: {size: 12.5, weight: 800, family: FONT}, bodyFont: {size: 12.5, family: FONT},
         filter: it => !it.dataset.band && it.parsed.y != null,
         callbacks: {
           title: items => items.length ? dateFmt(items[0].parsed.x) : '',
@@ -475,14 +616,14 @@ function drawMarket() {
   $('c-dram-table').innerHTML = table(
     ['기준일', 'DDR4 Avg', 'DDR4 High', 'DDR4 Low', 'DDR5 Avg', 'DDR5 High', 'DDR5 Low', 'GB당 DDR4 프리미엄'],
     [...ddr4].reverse().map(p => { const q = d5.get(p.d);
-      return [p.d, usd(p.avg), usd(p.high), usd(p.low), usd(q?.avg), usd(q?.high), usd(q?.low), q ? pct((p.avg / (q.avg / 2) - 1) * 100) : '–']; }));
+      return [p.d, usd(p.avg), usd(p.high), usd(p.low), usd(q?.avg), usd(q?.high), usd(q?.low), q ? pct((p.avg / (q.avg / 2) - 1) * 100) : '-']; }));
   $('c-nand-table').innerHTML = table(['기준일', 'Session Avg', 'Session High', 'Session Low'],
     [...nand].reverse().map(p => [p.d, usd(p.avg), usd(p.high), usd(p.low)]));
   const c5 = new Map(P.ddr5_contract.map(p => [p.d.slice(0, 7), p]));
   const all4 = P.ddr4_contract;
   $('c-contract-table').innerHTML = table(['기준월', 'DDR4 8GB High', 'Low', 'Average', '직전 확인월 대비', 'DDR5 16GB Average'],
     [...all4].reverse().map(p => { const i = all4.indexOf(p), prev = all4[i - 1];
-      return [p.d.slice(0, 7), usd(p.high), usd(p.low), usd(p.avg), prev ? pct((p.avg / prev.avg - 1) * 100) : '–', usd(c5.get(p.d.slice(0, 7))?.avg)]; }));
+      return [p.d.slice(0, 7), usd(p.high), usd(p.low), usd(p.avg), prev ? pct((p.avg / prev.avg - 1) * 100) : '-', usd(c5.get(p.d.slice(0, 7))?.avg)]; }));
 }
 
 /* ---------- 입고단가 ---------- */
@@ -494,44 +635,46 @@ function drawPurchase() {
   lineChart('c-ours', [
     {label: '당사 입고단가 (DDR4 8GB)', short: '입고', color: C.ours, dots: true, points: ours.map(r => ({x: mts(r.m), y: r.price}))},
     {label: '시장 계약가 (DDR4 8GB SO-DIMM)', short: '계약가', color: C.contract, dots: true, points: con.map(p => ({x: mts(p.d.slice(0, 7)), y: p.avg}))},
-  ], {dateFmt: monthLabel, right: 104});
+  ], {dateFmt: monthLabel, right: 108});
   const lo = ours.at(-1), lc = con.at(-1);
   $('c-ours-sub').innerHTML = lo && lc
-    ? `최근 입고단가 <strong>${usd(lo.price)}</strong> (${lo.m}, ${n0(lo.qty)}개) · 최근 확인 계약가 <strong>${usd(lc.avg)}</strong> (${lc.d.slice(0, 7)}) · 계약가 대비 ${pct((lo.price / lc.avg - 1) * 100)}`
+    ? `입고 <strong>${usd(lo.price)}</strong> (${lo.m}, ${n0(lo.qty)}개) · 계약가 <strong>${usd(lc.avg)}</strong> (${lc.d.slice(0, 7)})<br>계약가 대비 ${pct((lo.price / lc.avg - 1) * 100)}`
     : '';
 
   const others = S.items.filter(it => it.managed && it.code !== DDR4_8GB);
   $('itemCharts').innerHTML = others.map(it => { const last = since(it.code).at(-1);
-    return `<div class="card"><div class="chart-title">${esc(it.name)} <span class="code">${it.code}</span></div>
-      <div class="chart-sub">${last ? `최근 입고 ${last.m} · ${usd(last.price)} · ${n0(last.qty)}개` : '2025년 이후 입고 없음'}</div>
-      <div class="plot small"><canvas id="c-item-${it.code}" aria-label="${esc(it.name)} 입고단가 추이"></canvas></div></div>`; }).join('');
+    return `<div class="card">
+      <div class="card-head"><h2>${esc(it.name)}</h2><div class="meta">${last ? `최근 ${last.m} · <strong>${usd(last.price)}</strong> · ${n0(last.qty)}개` : '2025년 이후 입고 없음'}</div></div>
+      <div class="card-body"><div class="plot small"><canvas id="c-item-${it.code}" aria-label="${esc(it.name)} 입고단가 추이"></canvas></div>
+      <p class="caption">${it.code} · 2025년 1월 이후 월 가중평균(USD)</p></div></div>`; }).join('');
   for (const it of others)
     lineChart('c-item-' + it.code, [{label: '당사 입고단가', color: C.ours, dots: true, points: since(it.code).map(r => ({x: mts(r.m), y: r.price}))}],
-              {dateFmt: monthLabel, right: 60});
+              {dateFmt: monthLabel, right: 62});
 
   $('recentTable').innerHTML = table(['입고일', '품목', '수량', '단가(USD)', '로트'],
-    DATA.purchase.recent.map(r => [r.d, `${esc(itemName(r.code))} <span class="code">${r.code}</span>`, n0(r.qty), usd(r.price), esc(r.lot || '–')]), [0, 1, 4]);
+    DATA.purchase.recent.map(r => [r.d, `<strong>${esc(itemName(r.code))}</strong> <span class="code">${r.code}</span>`, n0(r.qty), `<span class="num" style="font-size:14px">${usd(r.price)}</span>`, r.lot ? `<span class="badge b-slate">${esc(r.lot)}</span>` : '-']), [0, 1, 4]);
   const Q = DATA.purchase.quotes;
   $('quoteTable').innerHTML = table(['구분', '스펙', '제조사', ...Q.months.map(m => m.slice(2).replace('-', '.'))],
     Q.rows.map(r => [esc(r.cat), esc(r.spec), esc(r.maker), ...r.p.map(v => v == null ? '' : usd(v))]), [0, 1, 2]);
   const issues = DATA.purchase.issues || [];
-  $('purchaseAlerts').innerHTML = issues.length ? `<div class="alert"><strong>확인 필요</strong><ul>${issues.map(i =>
-    `<li>${esc(itemName(i.code))} (${i.code}): ${esc(i.msg)} — 단가 열 기준으로 표시</li>`).join('')}</ul></div>` : '';
+  $('purchaseAlerts').innerHTML = issues.length ? `<div class="notice"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>확인 필요</strong><ul>${issues.map(i =>
+    `<li>${esc(itemName(i.code))} (${i.code}): ${esc(i.msg)} (단가 열 기준으로 표시)</li>`).join('')}</ul></div></div>` : '';
 }
 
 /* ---------- 시장 동향 ---------- */
 function renderTrend() {
-  const M = DATA.market;
-  if (!M) { $('trendBody').innerHTML = '<div class="card caption">시장 동향 데이터가 없습니다.</div>'; return; }
+  const M = DATA.market, el = $('p-trend');
+  if (!M) { el.innerHTML = '<div class="card"><div class="card-body caption" style="margin:0">시장 동향 데이터가 없습니다.</div></div>'; return; }
   const src = it => (it.sources || []).map(s => `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.label)}</a>`).join(' · ');
-  $('trendBody').innerHTML =
-    `<p class="caption" style="margin-top:0">${esc(M.week)} · ${M.updated} 리서치 · 현물가(Spot)와 계약가(Contract)를 구분해 표기</p>` +
-    M.sections.map(sec => `<div class="card"><h3>${esc(sec.title)}</h3><ul>${sec.items.map(it =>
-      `<li><span class="kind">${esc(it.kind)}</span>${rich(it.text)}${src(it) ? ` <span class="src">(${src(it)})</span>` : ''}</li>`).join('')}</ul></div>`).join('') +
-    `<div class="card"><h3>조달 시사점</h3><ul>${M.implications.map(t => `<li>${rich(t)}</li>`).join('')}</ul></div>`;
+  el.innerHTML = M.sections.map(sec => `<div class="card">
+      <div class="card-head"><h2><i class="fa-solid fa-earth-asia"></i>${esc(sec.title)}</h2><div class="meta">${esc(M.week)} · ${M.updated} 리서치</div></div>
+      <ul class="trend-list">${sec.items.map(it => `<li><span class="badge ${KIND_BADGE[it.kind] || 'b-slate'}">${esc(it.kind)}</span>
+        <div>${rich(it.text)}${src(it) ? `<div class="src">${src(it)}</div>` : ''}</div></li>`).join('')}</ul></div>`).join('') +
+    `<div class="card"><div class="card-head"><h2><i class="fa-solid fa-lightbulb"></i>조달 시사점</h2><div class="meta">당사 관점</div></div>
+      <ul class="trend-list">${M.implications.map(t => `<li><div>${rich(t)}</div></li>`).join('')}</ul></div>`;
 }
 
-/* ---------- 탭 ---------- */
+/* ---------- 탭·테마 ---------- */
 function show(tab) {
   current = tab;
   document.querySelectorAll('.tab').forEach(b => b.setAttribute('aria-selected', b.dataset.tab === tab));
@@ -546,18 +689,26 @@ function renderAll() {
   show(current);
 }
 
+function setTheme(theme) {
+  document.documentElement.dataset.theme = theme;
+  try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
+  $('themeBtn').innerHTML = `<i class="fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}"></i>`;
+  if (DATA) show(current);
+}
+
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-tab],[data-range],[data-snap]');
+  const t = e.target.closest('[data-tab],[data-range],[data-snap],#themeBtn');
   if (!t) return;
-  if (t.dataset.tab) show(t.dataset.tab);
+  if (t.id === 'themeBtn') return setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+  if (t.dataset.tab) { show(t.dataset.tab); scrollTo({top: 0}); }
   if (t.dataset.range) { range = t.dataset.range; drawMarket(); }
   if (t.dataset.snap) { snapKey = t.dataset.snap; renderAll(); }
 });
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => DATA && show(current));
 addEventListener('hashchange', () => {
   const hash = location.hash.slice(1);
-  if (DATA && hash !== current && document.querySelector(`[data-tab="${hash}"]`)) show(hash);
+  if (DATA && hash !== current && document.querySelector(`.tab[data-tab="${hash}"]`)) show(hash);
 });
+setTheme(document.documentElement.dataset.theme || 'light');
 
 fetch('data/dashboard.json?t=' + Date.now())
   .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
@@ -565,10 +716,13 @@ fetch('data/dashboard.json?t=' + Date.now())
     DATA = d;
     snapKey = d.inventory.confirmed ? 'confirmed' : 'pending';
     const hash = location.hash.slice(1);
-    if (document.querySelector(`[data-tab="${hash}"]`)) current = hash;
+    if (document.querySelector(`.tab[data-tab="${hash}"]`)) current = hash;
     renderAll();
+    // 웹폰트가 늦게 도착하면 차트 글자를 다시 그린다
+    document.fonts?.ready.then(() => show(current));
   })
-  .catch(err => { document.querySelector('.wrap').insertAdjacentHTML('beforeend', `<div class="alert">데이터를 불러오지 못했습니다 (${esc(err.message)}).</div>`); });
+  .catch(err => { document.querySelector('main').insertAdjacentHTML('beforeend',
+    `<div class="notice"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>데이터를 불러오지 못했습니다</strong> (${esc(err.message)})</div></div>`); });
 </script>
 </body>
 </html>
