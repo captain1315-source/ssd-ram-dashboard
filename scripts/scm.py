@@ -49,12 +49,12 @@ def receipts(con, codes):
 def purchase_orders(con, codes):
     """납기가 있는 발주 내역 (수입발주 포함). backlog = 발주수량 − 입고수량"""
     out = [dict(r) for r in con.execute(
-        f"select item_code, vendor_name, effective_due_date due, order_qty, received_qty, unit_price, currency, "
-        f"status, po_number from erp_purchase_orders where item_code in ({_in(codes)}) "
+        f"select item_code, vendor_name, effective_due_date due, order_date, order_qty, received_qty, unit_price, "
+        f"currency, status, po_number from erp_purchase_orders where item_code in ({_in(codes)}) "
         f"and status in ({_in(PO_STATUS)}) and effective_due_date is not null", (*codes, *PO_STATUS))]
     out += [dict(r, received_qty=0, unit_price=None, currency=None, status="수입발주", po_number=None)
             for r in con.execute(
-                f"select item_code, vendor_name, due_date due, qty order_qty from import_orders "
+                f"select item_code, vendor_name, due_date due, order_date, qty order_qty from import_orders "
                 f"where item_code in ({_in(codes)}) and due_date is not null", codes)]
     return out
 

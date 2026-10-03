@@ -7,7 +7,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from inventory import consume, grade, model_token, project, split_demand, total_ends, usage_sums, worst
+from inventory import (consume, grade, model_token, net_received, project, split_demand, total_ends,
+                       usage_sums, worst)
 from receipts import amount_mismatches, merge, monthly_receipts, resolve_maker
 
 
@@ -61,16 +62,22 @@ def test_model_token_takes_letters_after_slash():
 
 def test_model_token_without_letters_or_slash():
     assert model_token("AES-VKT-D1B/26C5J") == "(표기 없음)"
-    assert model_token("") is None
-    assert model_token(None) is None
-    assert model_token("NOSLASH") is None
+    assert model_token("") == "(모델 없음)"
+    assert model_token(None) == "(모델 없음)"
 
 
-def test_usage_sums_groups_models_and_reports_unknown_tokens():
-    by_model = {"A/KOR1": 10, "B/RCRB2": 30, "C/ZZZ9": 5, "": 2}
+def test_code_without_slash_is_its_own_token():
+    # 완제품 모델이 아닌 조립품 코드는 코드 그대로 설정에서 용도를 정할 수 있다
+    assert model_token("SA95-70998A") == "SA95-70998A"
+    sums, unknown = usage_sums({"SA95-70998A": 5}, {"SA95-70998A": "국내"})
+    assert sums == {"국내": 5} and unknown == {}
+
+
+def test_usage_sums_groups_models_and_reports_unknown_tokens_with_qty():
+    by_model = {"A/KOR1": 10, "B/RCRB2": 30, "C/ZZZ9": 5, "D/ZZZ1": 1, "": 2}
     sums, unknown = usage_sums(by_model, {"KOR": "국내", "RCRB": "해외"})
-    assert sums == {"국내": 10, "해외": 30, "미분류": 7}
-    assert unknown == {"ZZZ", "(모델 없음)"}
+    assert sums == {"국내": 10, "해외": 30, "미분류": 8}
+    assert unknown == {"ZZZ": 6, "(모델 없음)": 2}
 
 
 def test_split_demand_scales_to_target():
@@ -139,6 +146,59 @@ def test_total_ends_follow_mrp_chain():
     assert total_ends(100, 10, 20, [30, 40], [0, 50]) == [100, 110]
 
 
+# --- 입고대기 보정: 발주 자료보다 나중에 들어온 입고를 발주잔량에서 차감 ---
+
+def po(qty, received=0, due="2026-10-25", vendor="보이스아이", price=44.5, order_date="2026-09-28"):
+    return {"item_code": "JK51-10012B", "vendor_name": vendor, "due": due, "order_date": order_date,
+            "order_qty": qty, "received_qty": received, "unit_price": price, "currency": "USD"}
+
+
+def rcpt(qty, d="2026-10-01", vendor="보이스아이", price=44.5):
+    return {"입고일": d, "품번": "JK51-10012B", "거래처": vendor, "통화": "USD", "수량": qty, "금액": qty * price, "단가": price}
+
+
+def backlog(pos):
+    return [p["order_qty"] - p["received_qty"] for p in pos]
+
+
+def test_receipt_after_po_snapshot_is_netted_from_matching_po():
+    # 실제 사례: 9/28 발주 1,500개가 10/1 발주 자료에 미입고로 남아 있고, 10/1에 1,500개가 입고됨
+    pos, log = net_received([po(1500)], [rcpt(1500)], "2026-10-01")
+    assert backlog(pos) == [0]
+    assert log == [{"code": "JK51-10012B", "vendor": "보이스아이", "due": "2026-10-25", "qty": 1500, "date": "2026-10-01"}]
+
+
+def test_receipt_before_po_snapshot_is_already_reflected():
+    pos, log = net_received([po(1500)], [rcpt(1500, d="2026-09-30")], "2026-10-01")
+    assert backlog(pos) == [1500] and log == []
+
+
+def test_receipt_from_other_vendor_or_price_is_not_netted():
+    assert backlog(net_received([po(1500)], [rcpt(1500, vendor="지엔이")], "2026-10-01")[0]) == [1500]
+    assert backlog(net_received([po(1500)], [rcpt(1500, price=52.0)], "2026-10-01")[0]) == [1500]
+
+
+def test_same_day_receipt_is_skipped_when_po_already_shows_receipts():
+    # 발주 자료를 올린 날의 입고는 이미 반영됐을 수 있다
+    assert backlog(net_received([po(3000, received=1500)], [rcpt(1500)], "2026-10-01")[0]) == [1500]
+    assert backlog(net_received([po(3000, received=1500)], [rcpt(1500, d="2026-10-02")], "2026-10-01")[0]) == [0]
+
+
+def test_netting_fills_earliest_due_first_and_never_exceeds_backlog():
+    pos, log = net_received([po(1000, due="2026-11-20"), po(1000, due="2026-10-25")], [rcpt(1500, d="2026-10-05")], "2026-10-01")
+    assert backlog(pos) == [500, 0]
+    assert [(l["due"], l["qty"]) for l in log] == [("2026-10-25", 1000), ("2026-11-20", 500)]
+    assert backlog(net_received([po(1000)], [rcpt(5000, d="2026-10-05")], "2026-10-01")[0]) == [0]
+
+
+def test_po_ordered_after_the_receipt_is_not_netted():
+    assert backlog(net_received([po(1500, order_date="2026-10-03")], [rcpt(1500, d="2026-10-02")], "2026-10-01")[0]) == [1500]
+
+
+def test_no_netting_without_po_snapshot_date():
+    assert backlog(net_received([po(1500)], [rcpt(1500)], "")[0]) == [1500]
+
+
 # --- 입고 누적·제조사 판별 ---
 
 def receipt(no, code, qty, d="2026-10-01"):
@@ -184,7 +244,7 @@ def test_vendor_default_for_specific_item_wins_over_general_default():
 
 def test_models_without_code_can_be_mapped_in_settings():
     sums, unknown = usage_sums({"": 5, "A/KOR1": 1}, {"KOR": "국내", "(모델 없음)": "해외"})
-    assert sums == {"해외": 5, "국내": 1} and unknown == set()
+    assert sums == {"해외": 5, "국내": 1} and unknown == {}
 
 
 def test_monthly_receipts_weighted_average_usd_only():

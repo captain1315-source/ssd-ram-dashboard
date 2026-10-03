@@ -38,23 +38,26 @@ def worst(grades):
 def model_token(code):
     """모델 코드의 '/' 뒤 영문 표기. 예: 'SAPH-660/RCRB57NNB95' → 'RCRB'
 
-    '/'는 있는데 영문으로 시작하지 않으면 '(표기 없음)', 모델 코드 자체가 없으면 None.
+    '/'가 없는 코드(완제품 모델이 아닌 조립품 등, 예: 'SA95-70998A')는 코드 자체를 돌려준다.
+    '/'는 있는데 영문으로 시작하지 않으면 '(표기 없음)', 코드가 비어 있으면 '(모델 없음)'.
     """
-    if not code or "/" not in code:
-        return None
+    if not code:
+        return "(모델 없음)"
+    if "/" not in code:
+        return code
     m = re.match(r"[A-Za-z]+", code.split("/", 1)[1])
     return m.group(0) if m else "(표기 없음)"
 
 
 def usage_sums(by_model, model_usage):
-    """{모델코드: 수량} → ({용도: 수량}, 설정에 없는 표기 집합)"""
-    sums, unknown = {}, set()
+    """{모델코드: 수량} → ({용도: 수량}, {설정에 없는 표기: 수량})"""
+    sums, unknown = {}, {}
     for code, qty in by_model.items():
-        token = model_token(code) or "(모델 없음)"
+        token = model_token(code)
         usage = model_usage.get(token)
         if usage is None:
             usage = UNKNOWN
-            unknown.add(token)
+            unknown[token] = unknown.get(token, 0) + qty
         sums[usage] = sums.get(usage, 0) + qty
     return sums, unknown
 
@@ -110,6 +113,43 @@ def project(lots, steps):
         for i, lot in enumerate(state):
             ends[i].append(lot["stock"])
     return ends
+
+
+def net_received(pos, receipts, since):
+    """발주 자료가 만들어진 날(since) 이후의 입고를, 같은 품목·거래처의 미입고 발주에서 차감한다.
+
+    발주 자료가 입고 자료보다 드물게 올라와, 이미 들어온 물량이 입고대기에 남는 것을 바로잡는다.
+    - 납기가 빠른 발주부터 차감
+    - 입고일보다 나중에 낸 발주, 단가가 1% 넘게 다른 발주는 대상이 아니다
+    - 발주 자료를 올린 당일의 입고는 그 발주에 입고 실적이 전혀 없을 때만 차감한다
+      (실적이 있으면 그 입고가 이미 반영됐을 수 있다)
+    (보정한 발주 목록, 차감 내역 [{'code', 'vendor', 'due', 'qty', 'date'}])을 돌려준다.
+    """
+    pos = [dict(p, netted=0) for p in pos]
+    log = []
+    if not since:
+        return pos, log
+    for r in sorted((r for r in receipts if r["입고일"] >= since and r["수량"]), key=lambda r: r["입고일"]):
+        left = r["수량"]
+        price = r.get("단가") or (r["금액"] / r["수량"] if r.get("금액") else None)
+        mine = [p for p in pos if p["item_code"] == r["품번"] and p["vendor_name"] == r["거래처"]]
+        for p in sorted(mine, key=lambda p: p["due"]):
+            backlog = p["order_qty"] - p["received_qty"]
+            if left <= 0:
+                break
+            if backlog <= 0 or (p.get("order_date") and p["order_date"] > r["입고일"]):
+                continue
+            if r["입고일"] == since and p["received_qty"] - p["netted"] > 0:
+                continue
+            same_currency = not p.get("currency") or not r.get("통화") or p["currency"] == r["통화"]
+            if price and p.get("unit_price") and same_currency and abs(price - p["unit_price"]) > 0.01 * p["unit_price"]:
+                continue
+            take = min(left, backlog)
+            p["received_qty"] += take
+            p["netted"] += take
+            left -= take
+            log.append({"code": p["item_code"], "vendor": p["vendor_name"], "due": p["due"], "qty": take, "date": r["입고일"]})
+    return pos, log
 
 
 def total_ends(open_, received, pending, demand, inflow):

@@ -133,7 +133,7 @@ def top_up(parts, total):
     return parts
 
 
-def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, sop, issues):
+def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, netted, sop, issues):
     code = item["code"]
     m = mrp_now.get(code)
     if m is None:
@@ -141,32 +141,37 @@ def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, sop, issues):
         return None
     months = [scm.month_add(base, k) for k in range(7)]          # months[k] = M+k의 1일
 
-    # ---- 품목 합계: MRP 앱 수치 그대로
+    # ---- 품목 합계: MRP 앱 수치에서, 이미 들어온 것으로 확인된 발주(netted)만 입고 예정에서 뺀다
+    cut = [sum(n["qty"] for n in netted if n["code"] == code and months[k] <= n["due"] < months[k + 1])
+           for k in range(6)]
+    backlog = max(m["po_backlog"] - cut[0], 0)
     demand = [m["month_demand"] + m["extra_demand"]] + [m[f"w{4 * k}_demand"] for k in range(1, 6)]
-    inflow = [0] + [m[f"m{k}_in"] for k in range(1, 6)]
+    inflow = [0] + [max(m[f"m{k}_in"] - cut[k], 0) for k in range(1, 6)]
     total = {
-        "open": r2(m["carry_stock"]), "received": r2(m["receipt_qty"]), "pending": r2(m["po_backlog"]),
+        "open": r2(m["carry_stock"]), "received": r2(m["receipt_qty"]), "pending": r2(backlog),
         "demand": [r2(v) for v in demand],
-        "end": [r2(v) for v in inv.total_ends(m["carry_stock"], m["receipt_qty"], m["po_backlog"], demand, inflow)],
+        "end": [r2(v) for v in inv.total_ends(m["carry_stock"], m["receipt_qty"], backlog, demand, inflow)],
     }
 
     # ---- 용도별 소요: 당월은 생산계획, M+1~M+5는 S&OP의 모델별 소요로 비율을 구해 합계에 적용
-    raw, unknown = [], set()
-    plan, u = inv.usage_sums(scm.plan_demand_by_model(con, base, [code])[code], cfg["model_usage"])
-    raw.append(plan)
-    unknown |= u
-    for k in range(5):
-        s, u = inv.usage_sums({model: ds[k] for model, ds in sop[code].items() if ds[k]}, cfg["model_usage"])
+    raw, unknown = [], defaultdict(float)
+    by_month = [scm.plan_demand_by_model(con, base, [code])[code]]
+    by_month += [{model: ds[k] for model, ds in sop[code].items() if ds[k]} for k in range(5)]
+    for models in by_month:
+        s, u = inv.usage_sums(models, cfg["model_usage"])
         raw.append(s)
-        unknown |= u
+        for token, qty in u.items():
+            unknown[token] += qty
     fallback = defaultdict(float)
     for s in raw:
         for usage, qty in s.items():
             fallback[usage] += max(qty, 0)
     usage_demand = [inv.split_demand(demand[k], raw[k], fallback) for k in range(6)]
     if unknown:
-        issues.append({"code": code, "msg": "용도 미분류 모델 표기: " + ", ".join(sorted(unknown))
-                       + " (설정의 '모델용도' 시트에 추가해 주세요)"})
+        issues.append({"code": code, "msg":
+                       "국내용인지 해외용인지 정해지지 않은 소요가 있습니다: "
+                       + ", ".join(f"{t} {comma(q)}개" for t, q in sorted(unknown.items()))
+                       + ". 설정의 '모델용도' 시트에 이 코드를 추가하고 국내/해외를 적어 주세요"})
 
     # ---- 제조사별 시작 재고: 설정의 기초수량에서 출발해 기준월 월초까지 이월
     makers = cfg["makers"].get(code, [])
@@ -208,8 +213,8 @@ def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, sop, issues):
     my_pos = [p for p in pos if p["item_code"] == code]
     po_in = lambda k, qty: by_maker([(p["vendor_name"], qty(p), None, None) for p in my_pos
                                      if months[k] <= p["due"] < months[k + 1] and qty(p) > 0], cfg, code)
-    pending = top_up(po_in(0, lambda p: p["order_qty"] - p["received_qty"]), m["po_backlog"])
-    future = [top_up(po_in(k, lambda p: p["order_qty"]), m[f"m{k}_in"]) for k in range(1, 6)]
+    pending = top_up(po_in(0, lambda p: p["order_qty"] - p["received_qty"]), backlog)
+    future = [top_up(po_in(k, lambda p: p["order_qty"] - p["netted"]), inflow[k]) for k in range(1, 6)]
 
     known = {l["maker"] for l in lots}
     for name in sorted({mk for part in [received, pending, *future] for mk in part} - known):
@@ -252,24 +257,23 @@ def build_inventory(con, cfg, all_receipts, issues):
     codes = [it["code"] for it in cfg["items"]]
     base = scm.base_month(con)
     mrp_now = scm.mrp(con, base, codes)
-    pos = scm.purchase_orders(con, codes)
+    uploads = scm.upload_times(con)
     sop = scm.sop_by_model(con, codes)
-    items = [it for it in (build_item(it, cfg, con, base, mrp_now, all_receipts, pos, sop, issues)
+
+    # 발주 자료는 입고 자료보다 드물게 올라온다. 발주 자료가 만들어진 날 이후의 입고는
+    # 같은 품목·거래처의 미입고 발주에서 빼서, 이미 들어온 물량이 입고대기에 남지 않게 한다.
+    po_at = uploads.get("발주_RAW", "")
+    pos, netted = inv.net_received(scm.purchase_orders(con, codes), all_receipts, po_at[:10])
+    items = [it for it in (build_item(it, cfg, con, base, mrp_now, all_receipts, pos, netted, sop, issues)
                            for it in cfg["items"]) if it]
+    names = {it["code"]: it["name"] for it in cfg["items"]}
+    adjustments = [f"{names[n['code']]}: {n['date']} 입고 {comma(n['qty'])}개를 {short_vendor(n['vendor'])} 발주"
+                   f"(납기 {n['due']})의 입고대기에서 뺐습니다. 발주 자료({po_at})가 그 입고보다 먼저 올라와 있습니다"
+                   for n in netted]
 
     computed = max((r["computed_at"] for r in mrp_now.values()), default="")[:16]
-    uploads = scm.upload_times(con)
     if computed and (datetime.now() - datetime.fromisoformat(computed)).days > STALE_DAYS:
         issues.append({"code": None, "msg": f"MRP 앱의 마지막 계산이 {computed}입니다. 최신 자료가 올라갔는지 확인해 주세요"})
-
-    # 발주 자료가 입고 자료보다 먼저 올라갔으면, 이미 들어온 물량이 입고대기에도 남아 있을 수 있다
-    if uploads.get("발주_RAW", "") < uploads.get("입고_RAW", ""):
-        for it in items:
-            if it["total"]["received"] and it["total"]["pending"]:
-                issues.append({"code": it["code"], "msg":
-                               f"당월 입고 {comma(it['total']['received'])}개와 입고대기 {comma(it['total']['pending'])}개가 "
-                               f"함께 잡혀 있습니다. 발주 자료({uploads['발주_RAW']})가 입고 자료({uploads['입고_RAW']})보다 "
-                               f"먼저 올라가 같은 물량이 두 번 계산됐을 수 있습니다"})
 
     months = [scm.month_add(base, k) for k in range(7)]
     open_pos = sorted(
@@ -286,6 +290,7 @@ def build_inventory(con, cfg, all_receipts, issues):
         "months": [f"{int(months[k][5:7])}월말" for k in range(6)],
         "items": items,
         "pos": open_pos,
+        "adjustments": adjustments,
         "issues": issues,
     }
 

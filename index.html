@@ -278,6 +278,7 @@ a:hover { text-decoration: underline; }
       </div>
       <div class="scroll" id="stockTable"></div>
       <p class="caption">월초재고에 당월입고와 입고대기(당월 납기 발주잔량)를 더하고 월별 소요를 뺀 월말 재고입니다. 국내 소요는 국내·공용 재고에서, 해외 소요는 해외 재고를 먼저 쓰고 모자라면 공용 재고에서 뺍니다. 붉은 칸은 부족, 노란 칸은 다음 달 소진 예상입니다.</p>
+      <p class="caption" id="adjustNote" hidden></p>
     </div>
     <div class="card">
       <div class="card-head">
@@ -481,6 +482,10 @@ function renderInventory() {
 
   $('usageTable').innerHTML = table(['품목', '용도', ...M.map(m => esc(m.replace('말', '')))],
     I.items.flatMap(it => Object.entries(it.usage_demand).map(([u, ds], k) => [k ? '' : `<strong>${esc(it.name)}</strong> <span class="code">${it.code}</span>`, usageBadge(u), ...ds.map(n0)])), [0, 1]);
+
+  const adj = I.adjustments || [];
+  $('adjustNote').hidden = !adj.length;
+  $('adjustNote').innerHTML = adj.map(a => `<i class="fa-solid fa-circle-info"></i> 입고대기 보정 · ${esc(a)}`).join('<br>');
 
   const money = p => p.price == null ? '-' : p.currency === 'USD' ? usd(p.price) : n0(p.price) + (p.currency === 'KRW' ? '원' : '');
   $('poCard').hidden = !I.pos.length;
