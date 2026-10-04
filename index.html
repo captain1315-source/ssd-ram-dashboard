@@ -686,7 +686,7 @@ function drawPurchase() {
   const Q = DATA.purchase.quotes;
   $('quoteTable').innerHTML = table(['구분', '스펙', '제조사', ...Q.months.map(m => m.slice(2).replace('-', '.'))],
     Q.rows.map(r => [esc(r.cat), esc(r.spec), esc(r.maker), ...r.p.map(v => v == null ? '' : usd(v))]), [0, 1, 2]);
-  $('purchaseAlerts').innerHTML = noticeHtml((DATA.purchase.issues || []).map(i => ({...i, msg: i.msg + ' (단가 열 기준으로 표시)'})));
+  $('purchaseAlerts').innerHTML = noticeHtml(DATA.purchase.issues || []);
 }
 
 /* ---------- 시장 동향 ---------- */

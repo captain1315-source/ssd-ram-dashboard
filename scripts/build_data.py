@@ -339,7 +339,10 @@ def build_purchase(all_receipts, cfg, codes):
                "needs_maker": r["입고일"] >= baseline(cfg, r["품번"]),
                "vendor": short_vendor(r["거래처"]), "no": r["입고번호"]}
               for r in sorted(usd, key=lambda r: r["입고일"])[-10:]][::-1]
-    issues = [{"code": code, "msg": f"입고이력 {d}: 수량 {comma(qty)} × 단가 {comma(price)} ≠ 금액 {comma(amt)}"}
+    issues = [{"code": code, "msg":
+               f"{d} 입고 기록의 숫자가 서로 맞지 않습니다. 수량 {comma(qty)}개 × 단가 ${comma(price)} = ${comma(qty * price)}인데 "
+               f"금액은 ${comma(amt)}로 적혀 있습니다. 수량이나 금액 중 하나가 잘못 입력된 것으로 보입니다. "
+               f"차트에는 단가 ${comma(price)}를 그대로 썼습니다"}
               for d, code, qty, price, amt in rc.amount_mismatches(slim, codes)]
     return {"receipts": rc.monthly_receipts(slim, codes), "recent": recent,
             "quotes": read_quotes(QUOTES_XLSX), "issues": issues}
