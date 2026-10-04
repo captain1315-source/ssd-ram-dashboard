@@ -133,7 +133,7 @@ def top_up(parts, total):
     return parts
 
 
-def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, netted, sop, issues):
+def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, netted, sop, issues, unknown_models):
     code = item["code"]
     m = mrp_now.get(code)
     if m is None:
@@ -162,24 +162,23 @@ def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, netted, sop, is
     unknown_key = (inv.UNKNOWN, None)
 
     # ---- 소요 묶음(용도, 우선 제조사): 당월은 생산계획, M+1~M+5는 S&OP의 모델별 소요로 비율을 구해 합계에 적용
-    raw, unknown = [], defaultdict(float)
+    raw = []
     by_month = [scm.plan_demand_by_model(con, base, [code])[code]]
     by_month += [{model: ds[k] for model, ds in sop[code].items() if ds[k]} for k in range(5)]
     for models in by_month:
-        s, u = inv.group_demand(models, cfg["model_usage"], prefer)
+        s, _ = inv.group_demand(models, cfg["model_usage"], prefer)
         raw.append(s)
-        for token, qty in u.items():
-            unknown[token] += qty
+        for model, qty in models.items():       # 용도가 정해지지 않은 모델은 품목을 가리지 않고 모아서 한 번만 안내한다
+            token = inv.model_token(model)
+            if token not in cfg["model_usage"]:
+                u = unknown_models.setdefault(token, {"models": set(), "items": defaultdict(float)})
+                u["models"].add(model or "(모델 코드 없음)")
+                u["items"][item["name"]] += qty
     fallback = defaultdict(float)
     for s in raw:
         for key, qty in s.items():
             fallback[key] += max(qty, 0)
     usage_demand = [inv.split_demand(demand[k], raw[k], fallback, unknown_key) for k in range(6)]
-    if unknown:
-        issues.append({"code": code, "msg":
-                       "국내용인지 해외용인지 정해지지 않은 소요가 있습니다: "
-                       + ", ".join(f"{t} {comma(q)}개" for t, q in sorted(unknown.items()))
-                       + ". 설정의 '모델용도' 시트에 이 코드를 추가하고 국내/해외를 적어 주세요"})
 
     # ---- 제조사별 시작 재고: 설정의 기초수량에서 출발해 기준월 월초까지 이월
     as_of = max((mk["as_of"] for mk in makers if mk["as_of"]), default=None)
@@ -273,8 +272,15 @@ def build_inventory(con, cfg, all_receipts, issues):
     # 같은 품목·거래처의 미입고 발주에서 빼서, 이미 들어온 물량이 입고대기에 남지 않게 한다.
     po_at = uploads.get("발주_RAW", "")
     pos, netted = inv.net_received(scm.purchase_orders(con, codes), all_receipts, po_at[:10])
-    items = [it for it in (build_item(it, cfg, con, base, mrp_now, all_receipts, pos, netted, sop, issues)
+    unknown_models = {}
+    items = [it for it in (build_item(it, cfg, con, base, mrp_now, all_receipts, pos, netted, sop, issues, unknown_models)
                            for it in cfg["items"]) if it]
+    for token, u in sorted(unknown_models.items()):
+        where = ", ".join(f"{name} {comma(qty)}개" for name, qty in u["items"].items())
+        issues.append({"code": None, "msg":
+                       f"새 모델 {', '.join(sorted(u['models']))}: 국내용인지 해외용인지 아직 정해지지 않았습니다. "
+                       f"설정 파일 '모델용도' 시트에 '{token}' 한 줄을 추가하고 국내 또는 해외를 적어 주세요. "
+                       f"(이 모델의 소요: {where})"})
     names = {it["code"]: it["name"] for it in cfg["items"]}
     adjustments = [f"{names[n['code']]}: {n['date']} 입고 {comma(n['qty'])}개를 {short_vendor(n['vendor'])} 발주"
                    f"(납기 {n['due']})의 입고대기에서 뺐습니다. 발주 자료({po_at})가 그 입고보다 먼저 올라와 있습니다"
