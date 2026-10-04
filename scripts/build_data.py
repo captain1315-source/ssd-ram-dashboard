@@ -4,11 +4,11 @@
   python scripts/build_data.py
 
 자료 출처
-  시세            원본/Contract, Spot Price.xlsx (매일 루틴이 추가)
+  시세            원본/Contract, Spot Price.xlsx (fetch_prices.py가 하루 한 번 추가)
   재고·과부족     MRP 앱 DB (scm.py, 읽기 전용) + 원본/설정.xlsx (제조사·용도·기초수량)
   입고이력        원본/입고이력.csv (MRP 앱 DB의 새 입고를 실행할 때마다 누적, 원본/입력/의 ERP 파일도 흡수)
   견적 단가       원본/단가현황.xlsx
-  시장 동향       원본/market.json (주간 루틴이 작성)
+  시장 동향       원본/market.json (매주 금요일 예약 작업이 작성)
 """
 
 import json

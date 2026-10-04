@@ -3,7 +3,9 @@
 Windows 작업 스케줄러가 매시간 pythonw로 실행한다 (창이 뜨지 않는다).
 
   pythonw scripts/publish.py          평소 실행 (작업 스케줄러)
-  python  scripts/publish.py --now    시세 수집 시각 제한 없이 지금 실행하고 결과를 화면에도 보여준다
+  python  scripts/publish.py --now    시세도 지금 바로 받고 결과를 화면에도 보여준다
+
+시세 수집은 하루 한 번, 오후 4시 이후 첫 실행에서 한다. 재고·입고·견적 자료는 매시간 다시 읽는다.
 
 기록은 logs/publish.log 에 남는다. 실패해도 다음 실행에서 다시 시도한다.
 """
@@ -12,14 +14,14 @@ import io
 import subprocess
 import sys
 import traceback
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 LOG = ROOT / "logs" / "publish.log"
 LOG_KEEP = 600                      # 남겨 둘 줄 수
-# 디램익스체인지는 마감 시세가 19:10(KST)에 올라온다. 그 뒤 두 번, 놓쳤을 때를 대비해 다음 날 두 번 확인한다
-FETCH_HOURS = {8, 12, 20, 22}
+FETCH_AFTER_HOUR = 16               # 시세 수집은 하루 한 번, 오후 4시 이후 첫 실행에서
+FETCH_MARK = ROOT / "logs" / "last_fetch.txt"   # 마지막으로 수집한 날짜
 NO_WINDOW = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -44,6 +46,19 @@ def captured(fn):
         return False, buf.getvalue() + traceback.format_exc()
 
 
+def fetch_due(now, fetched):
+    """시세를 받을 차례면 수집 표시로 남길 날짜를, 아니면 None을 돌려준다. fetched: 마지막 수집 표시(YYYY-MM-DD)
+
+    오후 4시 이후 첫 실행에서 하루 한 번 받는다. 전날 수집을 놓쳤으면(PC가 꺼져 있던 날)
+    다음 날 오전 첫 실행에서 한 번 받아 전날 마감값으로 채운다.
+    """
+    if now.hour >= FETCH_AFTER_HOUR:
+        today = f"{now:%Y-%m-%d}"
+        return today if fetched < today else None
+    yesterday = f"{now - timedelta(days=1):%Y-%m-%d}"
+    return yesterday if fetched < yesterday else None
+
+
 def summary(text):
     """변환 출력에서 품목별 상세 줄은 빼고 요약만 남긴다."""
     return [l for l in text.splitlines() if l and (not l.startswith(" ") or l.lstrip().startswith("[확인]"))]
@@ -53,10 +68,18 @@ def main():
     now, force = datetime.now(), "--now" in sys.argv
     lines = [f"=== {now:%Y-%m-%d %H:%M} ==="]
 
-    if force or now.hour in FETCH_HOURS:
+    fetched = FETCH_MARK.read_text(encoding="utf-8").strip() if FETCH_MARK.exists() else ""
+    mark = fetch_due(now, fetched)
+    if force or mark:
         import fetch_prices
         ok, out = captured(fetch_prices.main)
-        lines += out.splitlines() if ok else ["시세 수집 실패 (다음 실행에서 다시 시도):", *out.splitlines()[-3:]]
+        if ok:
+            lines += out.splitlines() or ["시세: 새로 추가할 값 없음"]
+        else:
+            lines += ["시세 수집 실패 (다음 실행에서 다시 시도):", *out.splitlines()[-3:]]
+        if ok and mark:
+            FETCH_MARK.parent.mkdir(exist_ok=True)
+            FETCH_MARK.write_text(mark, encoding="utf-8")
 
     import build_data
     ok, out = captured(build_data.main)

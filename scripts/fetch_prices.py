@@ -4,10 +4,9 @@
   python scripts/fetch_prices.py
 
 기록 규칙
-  DRAM 현물(정품 칩, eTT, DDR5): 표의 Last Update가 마감 세션(18시 이후, GMT+8)일 때만 그 날짜로 기록한다.
-                                 장중 세션 값은 최종값이 아니므로 건너뛰고 다음 실행에서 받는다.
-  NAND 웨이퍼(주 1회 갱신):      표의 Last Update 날짜가 엑셀에 없으면 기록한다.
-  같은 품목·같은 날짜가 이미 있으면 건너뛴다.
+  화면에 보이는 값을 표의 Last Update 날짜로 기록한다. 같은 품목·같은 날짜가 이미 있으면 건너뛴다.
+  하루 한 번 오후 4시에 받으므로 DRAM 현물은 보통 그날의 14:40 세션(GMT+8) 값이다.
+  마감(18:10) 전 값이면 비고에 어느 세션 값인지 적는다. NAND 웨이퍼는 주 1회 갱신된다.
 """
 import html
 import re
@@ -67,13 +66,11 @@ def new_rows(text, have):
         day, hour = updated
         if (item, day) in have:
             continue
-        if category == "DRAM Spot" and hour < CLOSING_HOUR:
-            skipped.append(f"{item}: {day} 장중 값({hour}시)이라 마감 후 기록")
-            continue
         high, low, s_high, s_low, avg, chg = values
         date = datetime.fromisoformat(day)
         if category == "DRAM Spot":
-            rows.append([date, category, item, high, low, s_high, s_low, avg, round(chg / 100, 6), None, None, None, None])
+            note = None if hour >= CLOSING_HOUR else f"{hour}시 세션 값 (마감 전)"
+            rows.append([date, category, item, high, low, s_high, s_low, avg, round(chg / 100, 6), None, None, note, None])
         else:   # 웨이퍼 표는 앞의 두 값이 Weekly High/Low
             rows.append([date, category, item, None, None, s_high, s_low, avg, round(chg / 100, 6), high, low, None, None])
     return rows, skipped

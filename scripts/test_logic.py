@@ -4,12 +4,14 @@
 """
 import os
 import sys
+from datetime import datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from inventory import (consume, grade, group_demand, model_token, net_received, project, split_demand,
                        total_ends, usage_for, usage_sums, worst)
 import fetch_prices as fp
+import publish
 from receipts import amount_mismatches, merge, monthly_receipts, resolve_maker
 
 
@@ -287,10 +289,18 @@ def test_closing_session_rows_are_recorded_with_table_date():
     assert skipped == []
 
 
-def test_intraday_dram_values_wait_for_closing_but_wafer_is_recorded():
+def test_intraday_dram_values_are_recorded_with_a_session_note():
+    # 하루 한 번 오후 4시에 받으면 그날의 14:40 세션 값이 보인다
     rows, skipped = fp.new_rows(PAGE.format(time="14:40"), set())
-    assert [r[2] for r in rows] == ["512Gb TLC"]
-    assert len(skipped) == 3 and all("장중" in s for s in skipped)
+    by_item = {r[2]: r for r in rows}
+    assert len(rows) == 4 and skipped == []
+    assert by_item["DDR4 8Gb (1Gx8) eTT"][11] == "14시 세션 값 (마감 전)"
+    assert by_item["512Gb TLC"][11] is None
+
+
+def test_closing_session_rows_have_no_note():
+    rows, _ = fp.new_rows(PAGE.format(time="18:10"), set())
+    assert all(r[11] is None for r in rows)
 
 
 def test_rows_already_in_excel_are_not_added_again():
@@ -302,6 +312,21 @@ def test_rows_already_in_excel_are_not_added_again():
 def test_missing_table_is_reported_not_guessed():
     rows, skipped = fp.new_rows("nothing here", set())
     assert rows == [] and len(skipped) == 4
+
+
+def test_prices_are_fetched_once_a_day_after_4pm():
+    at = lambda h: datetime(2026, 10, 5, h, 10)
+    assert publish.fetch_due(at(15), "2026-10-04") is None           # 오후 4시 전에는 받지 않는다
+    assert publish.fetch_due(at(16), "2026-10-04") == "2026-10-05"   # 4시 이후 첫 실행
+    assert publish.fetch_due(at(17), "2026-10-05") is None           # 그날은 다시 받지 않는다
+    assert publish.fetch_due(at(17), "2026-10-04") == "2026-10-05"   # 4시 실행을 놓쳤으면 다음 실행에서
+
+
+def test_missed_day_is_caught_up_once_next_morning():
+    morning = datetime(2026, 10, 5, 8, 10)
+    assert publish.fetch_due(morning, "2026-10-02") == "2026-10-04"  # 전날 수집을 놓쳤다 → 전날 마감값 보충
+    assert publish.fetch_due(morning, "2026-10-04") is None          # 보충은 한 번만
+    assert publish.fetch_due(morning, "") == "2026-10-04"            # 수집 기록이 없을 때
 
 
 # --- 입고 누적·제조사 판별 ---
