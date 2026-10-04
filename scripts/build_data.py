@@ -38,6 +38,7 @@ MARKET_JSON = SRC / "market.json"
 
 SPOT_ITEMS = {
     "DDR4 8Gb (1Gx8) 3200": "ddr4_spot",
+    "DDR4 8Gb (1Gx8) eTT": "ett_spot",       # 모듈 업체용 등급 칩. ×8이 8GB 모듈 매입가와 비교되는 수준
     "DDR5 16Gb (2Gx8) 4800/5600": "ddr5_spot",
     "512Gb TLC": "nand_spot",
 }

@@ -6,6 +6,7 @@ dramexchange.com 가격 Excel 업데이트 스크립트
                           [--contract-high 128 --contract-low 96 --contract-avg 119]
 
 DRAM Spot:    Session High/Low/Average, Session Change (소수점, 예: 0.0165)
+              --dram-* = DDR4 8Gb (1Gx8) 3200 정품 칩, --ett-* = DDR4 8Gb (1Gx8) eTT, --ddr5-* = DDR5 16Gb
 Wafer Spot:   Session High/Low/Average, Average Change (소수점)
 Contract:     High/Low/Average (optional, 월별 수동 입력 시)
 """
@@ -75,6 +76,13 @@ def main():
     parser.add_argument('--ddr5-sl', type=float, help='Session Low')
     parser.add_argument('--ddr5-avg', type=float)
     parser.add_argument('--ddr5-chg', type=float, help='Session Change (소수점)')
+    # DDR4 eTT Spot (DDR4 8Gb (1Gx8) eTT) — 모듈 업체용 등급 칩. 8GB 모듈 매입가와 비교하는 기준
+    parser.add_argument('--ett-high', type=float, help='Daily High')
+    parser.add_argument('--ett-low', type=float, help='Daily Low')
+    parser.add_argument('--ett-sh', type=float, help='Session High')
+    parser.add_argument('--ett-sl', type=float, help='Session Low')
+    parser.add_argument('--ett-avg', type=float)
+    parser.add_argument('--ett-chg', type=float, help='Session Change (소수점)')
     # Wafer Spot
     parser.add_argument('--wafer-wh', type=float, help='Weekly High')
     parser.add_argument('--wafer-wl', type=float, help='Weekly Low')
@@ -143,6 +151,29 @@ def main():
                 None,
             ])
             print(f"✓ DRAM Spot (DDR5 16Gb 4800/5600) 추가: avg={args.ddr5_avg}, chg={args.ddr5_chg}")
+            updated = True
+
+    # DDR4 eTT Spot Price 추가
+    if args.ett_avg is not None:
+        if already_exists(ws_spot, 'DRAM Spot', today, 'DDR4 8Gb (1Gx8) eTT'):
+            print(f"  DRAM Spot (DDR4 eTT) {today} 이미 존재, 건너뜀")
+        else:
+            ws_spot.append([
+                datetime.combine(today, datetime.min.time()),
+                'DRAM Spot',
+                'DDR4 8Gb (1Gx8) eTT',
+                args.ett_high,
+                args.ett_low,
+                args.ett_sh if args.ett_sh is not None else args.ett_high,
+                args.ett_sl if args.ett_sl is not None else args.ett_low,
+                args.ett_avg,
+                args.ett_chg,
+                None,
+                None,
+                None,
+                None,
+            ])
+            print(f"✓ DRAM Spot (DDR4 8Gb eTT) 추가: avg={args.ett_avg}, chg={args.ett_chg}")
             updated = True
 
     # Wafer Spot Price 추가
