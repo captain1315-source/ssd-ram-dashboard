@@ -8,7 +8,7 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from inventory import (consume, grade, group_demand, model_token, net_received, project, split_demand,
-                       total_ends, usage_sums, worst)
+                       total_ends, usage_for, usage_sums, worst)
 from receipts import amount_mismatches, merge, monthly_receipts, resolve_maker
 
 
@@ -78,6 +78,24 @@ def test_usage_sums_groups_models_and_reports_unknown_tokens_with_qty():
     sums, unknown = usage_sums(by_model, {"KOR": "국내", "RCRB": "해외"})
     assert sums == {"국내": 10, "해외": 30, "미분류": 8}
     assert unknown == {"ZZZ": 6, "(모델 없음)": 2}
+
+
+def test_usage_setting_matches_leading_letters_of_model_token():
+    # 설정에 'KOB'만 적어도 FORZA225S/KOBSN54JNG(표기 KOBSN)에 적용된다
+    assert usage_for("KOBSN", {"KOB": "국내"}) == "국내"
+    assert usage_for("KOR", {"KOB": "국내"}) is None
+
+
+def test_usage_setting_prefers_exact_then_longest_match():
+    usage = {"KOR": "국내", "KORSN": "해외", "K": "해외"}
+    assert usage_for("KORSN", usage) == "해외"      # 정확히 같은 표기가 우선
+    assert usage_for("KORXY", usage) == "국내"      # 그다음은 가장 길게 맞는 표기
+    assert usage_for("RKOR", usage) is None         # 앞부분이 맞아야 한다 (중간 일치는 아님)
+
+
+def test_group_demand_uses_leading_letter_match():
+    groups, unknown = group_demand({"FORZA225S/KOBSN54JNG": 10}, {"KOB": "국내"}, lambda code: None)
+    assert groups == {("국내", None): 10} and unknown == {}
 
 
 def test_split_demand_scales_to_target():

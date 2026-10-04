@@ -49,6 +49,17 @@ def model_token(code):
     return m.group(0) if m else "(표기 없음)"
 
 
+def usage_for(token, model_usage):
+    """모델 표기의 용도. 설정에 같은 표기가 있으면 그것을, 없으면 앞부분이 가장 길게 맞는 표기를 쓴다.
+
+    예: 설정에 'KOB'만 있어도 표기 'KOBSN'에 적용된다. 맞는 것이 없으면 None.
+    """
+    if token in model_usage:
+        return model_usage[token]
+    hits = [k for k in model_usage if token.startswith(k)]
+    return model_usage[max(hits, key=len)] if hits else None
+
+
 def group_demand(by_model, model_usage, prefer):
     """{모델코드: 수량} → ({(용도, 우선 제조사): 수량}, {설정에 없는 표기: 수량})
 
@@ -57,7 +68,7 @@ def group_demand(by_model, model_usage, prefer):
     groups, unknown = {}, {}
     for code, qty in by_model.items():
         token = model_token(code)
-        usage = model_usage.get(token)
+        usage = usage_for(token, model_usage)
         if usage is None:
             usage = UNKNOWN
             unknown[token] = unknown.get(token, 0) + qty

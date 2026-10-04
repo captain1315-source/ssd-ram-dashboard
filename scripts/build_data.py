@@ -170,7 +170,7 @@ def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, netted, sop, is
         raw.append(s)
         for model, qty in models.items():       # 용도가 정해지지 않은 모델은 품목을 가리지 않고 모아서 한 번만 안내한다
             token = inv.model_token(model)
-            if token not in cfg["model_usage"]:
+            if inv.usage_for(token, cfg["model_usage"]) is None:
                 u = unknown_models.setdefault(token, {"models": set(), "items": defaultdict(float)})
                 u["models"].add(model or "(모델 코드 없음)")
                 u["items"][item["name"]] += qty
