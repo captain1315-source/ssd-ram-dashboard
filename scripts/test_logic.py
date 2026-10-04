@@ -9,6 +9,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from inventory import (consume, grade, group_demand, model_token, net_received, project, split_demand,
                        total_ends, usage_for, usage_sums, worst)
+import fetch_prices as fp
 from receipts import amount_mismatches, merge, monthly_receipts, resolve_maker
 
 
@@ -244,6 +245,63 @@ def test_po_ordered_after_the_receipt_is_not_netted():
 
 def test_no_netting_without_po_snapshot_date():
     assert backlog(net_received([po(1500)], [rcpt(1500)], "")[0]) == [1500]
+
+
+# --- 디램익스체인지 화면 읽기 ---
+
+PAGE = (
+    "DRAM Spot Price | Last Update: Oct.2 2026 {time} (GMT+8) <Price Notice> | "
+    "Item | Daily High | Daily Low | Session High | Session Low | Session Average | Session Change | History | "
+    "DDR5 16Gb (2Gx8) 4800/5600 | 69.50 | 43.50 | 69.50 | 43.50 | 58.000 | 0.12 % | "
+    "DDR5 16Gb (2Gx8) eTT | 27.80 | 25.40 | 27.80 | 25.40 | 26.100 | 0.39 % | "
+    "DDR4 16Gb (2Gx8) 3200 | 118.00 | 45.50 | 118.00 | 45.50 | 83.588 | -0.09 % | "
+    "DDR4 8Gb (1Gx8) 3200 | 85.00 | 25.00 | 85.00 | 25.00 | 46.321 | 0.00 % | "
+    "DDR4 8Gb (1Gx8) eTT | 6.35 | 5.70 | 6.35 | 5.70 | 5.940 | 0.34 % | "
+    "Wafer Spot Price | Last Update:Sep.28 2026 14:40 (GMT+8) <Price Notice> | "
+    "Item | Weekly High | Weekly Low | Session High | Session Low | Session Average | Average Change | History | "
+    "512Gb TLC | 22.00 | 17.20 | 22.00 | 17.20 | 19.396 | -2.45 % | 256Gb TLC | 20.00 | 16.00 | 20.00 | 16.00 | 17.885 | 0.00 % |"
+)
+
+
+def test_page_text_turns_cells_into_pipe_separated_text():
+    raw = "<table><tr><td>DDR4 8Gb (1Gx8) eTT</td><td>6.35</td><td>5.70</td></tr></table><script>x</script>"
+    assert fp.page_text(raw).strip() == "DDR4 8Gb (1Gx8) eTT | 6.35 | 5.70 |"
+
+
+def test_table_update_reads_date_and_hour():
+    assert fp.table_update(PAGE.format(time="18:10"), "DRAM Spot Price") == ("2026-10-02", 18)
+    assert fp.table_update(PAGE.format(time="18:10"), "Wafer Spot Price") == ("2026-09-28", 14)
+
+
+def test_closing_session_rows_are_recorded_with_table_date():
+    rows, skipped = fp.new_rows(PAGE.format(time="18:10"), set())
+    by_item = {r[2]: r for r in rows}
+    assert set(by_item) == {"DDR4 8Gb (1Gx8) 3200", "DDR4 8Gb (1Gx8) eTT", "DDR5 16Gb (2Gx8) 4800/5600", "512Gb TLC"}
+    ett = by_item["DDR4 8Gb (1Gx8) eTT"]
+    assert ett[0].strftime("%Y-%m-%d") == "2026-10-02" and ett[1] == "DRAM Spot"
+    assert ett[3:9] == [6.35, 5.70, 6.35, 5.70, 5.94, 0.0034]
+    assert by_item["DDR4 8Gb (1Gx8) 3200"][7] == 46.321     # 'DDR4 16Gb' 행이나 eTT 행과 섞이지 않는다
+    wafer = by_item["512Gb TLC"]
+    assert wafer[0].strftime("%Y-%m-%d") == "2026-09-28" and wafer[3:5] == [None, None]
+    assert wafer[5:11] == [22.0, 17.2, 19.396, -0.0245, 22.0, 17.2]
+    assert skipped == []
+
+
+def test_intraday_dram_values_wait_for_closing_but_wafer_is_recorded():
+    rows, skipped = fp.new_rows(PAGE.format(time="14:40"), set())
+    assert [r[2] for r in rows] == ["512Gb TLC"]
+    assert len(skipped) == 3 and all("장중" in s for s in skipped)
+
+
+def test_rows_already_in_excel_are_not_added_again():
+    have = {("DDR4 8Gb (1Gx8) 3200", "2026-10-02"), ("512Gb TLC", "2026-09-28")}
+    rows, _ = fp.new_rows(PAGE.format(time="18:10"), have)
+    assert sorted(r[2] for r in rows) == ["DDR4 8Gb (1Gx8) eTT", "DDR5 16Gb (2Gx8) 4800/5600"]
+
+
+def test_missing_table_is_reported_not_guessed():
+    rows, skipped = fp.new_rows("nothing here", set())
+    assert rows == [] and len(skipped) == 4
 
 
 # --- 입고 누적·제조사 판별 ---
