@@ -3,7 +3,8 @@
 Windows 작업 스케줄러가 매시간 pythonw로 실행한다 (창이 뜨지 않는다).
 
   pythonw scripts/publish.py          평소 실행 (작업 스케줄러)
-  python  scripts/publish.py --now    시세도 지금 바로 받고 결과를 화면에도 보여준다
+  python  scripts/publish.py --now    지금 실행하고 결과를 화면에도 보여준다 (시세는 받을 차례일 때만)
+  python  scripts/publish.py --fetch   위와 같되 시세도 지금 받는다. 오후 4시 전에 쓰면 그 시각 값이 그날 값으로 남는다
 
 시세 수집은 하루 한 번, 오후 4시 이후 첫 실행에서 한다. 재고·입고·견적 자료는 매시간 다시 읽는다.
 
@@ -65,7 +66,8 @@ def summary(text):
 
 
 def main():
-    now, force = datetime.now(), "--now" in sys.argv
+    now, force = datetime.now(), "--fetch" in sys.argv
+    show = force or "--now" in sys.argv
     lines = [f"=== {now:%Y-%m-%d %H:%M} ==="]
 
     fetched = FETCH_MARK.read_text(encoding="utf-8").strip() if FETCH_MARK.exists() else ""
@@ -101,7 +103,7 @@ def main():
     LOG.parent.mkdir(exist_ok=True)
     old = LOG.read_text(encoding="utf-8").splitlines() if LOG.exists() else []
     LOG.write_text("\n".join((old + lines)[-LOG_KEEP:]) + "\n", encoding="utf-8")
-    if force and sys.stdout:
+    if show and sys.stdout:
         if hasattr(sys.stdout, "reconfigure"):
             sys.stdout.reconfigure(encoding="utf-8")
         print("\n".join(lines))
