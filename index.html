@@ -238,19 +238,19 @@ a:hover { text-decoration: underline; }
     </div>
     <div class="card">
       <div class="card-head">
-        <h2><i class="fa-solid fa-memory"></i>DRAM 현물가 (GB당 USD)</h2>
-        <div class="meta">Session Average 기준<br>DDR4 8Gb = 1GB, DDR5 16Gb = 2GB로 환산</div>
+        <h2><i class="fa-solid fa-memory"></i>DDR4 칩 현물가 (8Gb 1Gx8 3200, 칩 1개 USD)</h2>
+        <div class="meta">디램익스체인지 Session Average<br>대형 제조사 정품 칩 기준. 8GB 모듈에는 이 칩이 8개 들어감</div>
       </div>
       <div class="card-body">
         <div class="legend" id="c-dram-legend"></div>
-        <div class="plot"><canvas id="c-dram" aria-label="DRAM 현물가 GB당 추이"></canvas></div>
-        <details class="tv"><summary>표로 보기 (환산 전 원 시세)</summary><div class="scroll" id="c-dram-table"></div></details>
+        <div class="plot"><canvas id="c-dram" aria-label="DDR4 칩 현물가 추이"></canvas></div>
+        <details class="tv"><summary>표로 보기</summary><div class="scroll" id="c-dram-table"></div></details>
       </div>
     </div>
     <div class="card">
       <div class="card-head">
-        <h2><i class="fa-solid fa-hard-drive"></i>NAND 웨이퍼 현물가 (512Gb TLC, USD)</h2>
-        <div class="meta">Session Average 기준, 주 1회 갱신</div>
+        <h2><i class="fa-solid fa-hard-drive"></i>NAND 웨이퍼 현물가 (512Gb TLC, 다이 1개 USD)</h2>
+        <div class="meta">디램익스체인지 Session Average, 주 1회 갱신<br>512Gb = 64GB. 128GB SSD는 2개, 256GB SSD는 4개 분량</div>
       </div>
       <div class="card-body">
         <div class="plot"><canvas id="c-nand" aria-label="NAND 웨이퍼 현물가 추이"></canvas></div>
@@ -264,7 +264,7 @@ a:hover { text-decoration: underline; }
       </div>
       <div class="card-body">
         <div class="plot"><canvas id="c-contract" aria-label="DDR4 8GB 계약가 추이"></canvas></div>
-        <details class="tv"><summary>표로 보기 (DDR5 16GB 포함)</summary><div class="scroll" id="c-contract-table"></div></details>
+        <details class="tv"><summary>표로 보기</summary><div class="scroll" id="c-contract-table"></div></details>
       </div>
     </div>
   </section>
@@ -327,6 +327,7 @@ a:hover { text-decoration: underline; }
 <script>
 const MANAGED_FROM = '2025-01';
 const DDR4_8GB = 'JK51-10012B';
+const SHOW_DDR5 = false;   // DDR5 시세 표시 여부. 자료는 계속 수집하고 화면에서만 숨긴다
 const GRADE = {critical: '위험', serious: '발주 필요', warning: '모니터링', good: '정상'};
 const GRADE_ORDER = ['critical', 'serious', 'warning', 'good'];
 const KIND_BADGE = {'계약가': 'b-blue', '현물가': 'b-good', '구조': 'b-slate'};
@@ -450,9 +451,9 @@ function renderSummary() {
   };
   const contractAge = Math.floor((ts(P.ddr4_spot.at(-1).d) - ts(P.ddr4_contract.at(-1).d)) / 864e5);
   $('priceList').innerHTML = [
-    row('DDR4 현물', '8Gb (1Gx8) 3200', P.ddr4_spot, '--s-ddr4'),
-    row('DDR5 현물', '16Gb (2Gx8) 4800/5600', P.ddr5_spot, '--s-ddr5'),
-    row('NAND 현물', '512Gb TLC 웨이퍼', P.nand_spot, '--s-nand'),
+    row('DDR4 칩 현물', '8Gb (1Gx8) 3200 · 칩 1개', P.ddr4_spot, '--s-ddr4'),
+    SHOW_DDR5 ? row('DDR5 현물', '16Gb (2Gx8) 4800/5600 · 칩 1개', P.ddr5_spot, '--s-ddr5') : '',
+    row('NAND 웨이퍼 현물', '512Gb TLC · 다이 1개(64GB)', P.nand_spot, '--s-nand'),
     row('DDR4 계약가', '8GB SO-DIMM 모듈', P.ddr4_contract, '--s-contract', '직전 확인월 대비', contractAge > 45 ? ', 이후 미확인' : ' '),
   ].join('');
 
@@ -546,7 +547,8 @@ function lineChart(id, series, {dateFmt = fullDate, right = 92} = {}) {
   plot.querySelector('.empty')?.remove();
   const xs = [...new Set(series.flatMap(s => s.points.map(p => p.x)))].sort((a, b) => a - b);
   const legend = $(id + '-legend');
-  if (legend) legend.innerHTML = series.map(s => `<span class="key"><i style="background:${s.color}"></i>${esc(s.label)}</span>`).join('');
+  // 계열이 하나면 제목이 곧 범례다
+  if (legend) legend.innerHTML = series.length > 1 ? series.map(s => `<span class="key"><i style="background:${s.color}"></i>${esc(s.label)}</span>`).join('') : '';
   canvas.hidden = !xs.length;
   if (!xs.length) { plot.insertAdjacentHTML('beforeend', '<div class="empty">선택한 기간에 데이터가 없습니다</div>'); return; }
 
@@ -609,26 +611,26 @@ function drawMarket() {
   const ddr4 = f(P.ddr4_spot), ddr5 = f(P.ddr5_spot), nand = f(P.nand_spot), con = f(P.ddr4_contract);
   document.querySelectorAll('#rangeSeg button').forEach(b => b.setAttribute('aria-pressed', b.dataset.range === range));
 
-  lineChart('c-dram', [
-    {label: 'DDR4 8Gb (1Gx8) 3200', short: 'DDR4', color: C.ddr4, points: ddr4.map(p => ({x: ts(p.d), y: p.avg}))},
-    {label: 'DDR5 16Gb (2Gx8) 4800/5600', short: 'DDR5', color: C.ddr5, points: ddr5.map(p => ({x: ts(p.d), y: p.avg / 2}))},
-  ]);
+  // DDR5는 SHOW_DDR5가 켜져 있을 때만 함께 그린다 (자료는 계속 수집)
+  const dram = [{label: 'DDR4 8Gb (1Gx8) 3200', short: 'DDR4', color: C.ddr4, points: ddr4.map(p => ({x: ts(p.d), y: p.avg}))}];
+  if (SHOW_DDR5) dram.push({label: 'DDR5 16Gb (2Gx8) 4800/5600', short: 'DDR5', color: C.ddr5, points: ddr5.map(p => ({x: ts(p.d), y: p.avg}))});
+  lineChart('c-dram', dram, {right: SHOW_DDR5 ? 92 : 64});
   lineChart('c-nand', [{label: 'NAND 512Gb TLC', color: C.nand, dots: nand.length <= 14, points: nand.map(p => ({x: ts(p.d), y: p.avg}))}], {right: 64});
   lineChart('c-contract', [{label: 'DDR4 8GB SO-DIMM (Average)', color: C.contract, dots: true, band: true,
     points: con.map(p => ({x: mts(p.d.slice(0, 7)), y: p.avg, hi: p.high, lo: p.low}))}], {right: 64, dateFmt: monthLabel});
 
   const d5 = new Map(ddr5.map(p => [p.d, p]));
   $('c-dram-table').innerHTML = table(
-    ['기준일', 'DDR4 Avg', 'DDR4 High', 'DDR4 Low', 'DDR5 Avg', 'DDR5 High', 'DDR5 Low', 'GB당 DDR4 프리미엄'],
+    ['기준일', 'DDR4 Avg', 'DDR4 High', 'DDR4 Low', ...(SHOW_DDR5 ? ['DDR5 Avg', 'DDR5 High', 'DDR5 Low'] : [])],
     [...ddr4].reverse().map(p => { const q = d5.get(p.d);
-      return [p.d, usd(p.avg), usd(p.high), usd(p.low), usd(q?.avg), usd(q?.high), usd(q?.low), q ? pct((p.avg / (q.avg / 2) - 1) * 100) : '-']; }));
+      return [p.d, usd(p.avg), usd(p.high), usd(p.low), ...(SHOW_DDR5 ? [usd(q?.avg), usd(q?.high), usd(q?.low)] : [])]; }));
   $('c-nand-table').innerHTML = table(['기준일', 'Session Avg', 'Session High', 'Session Low'],
     [...nand].reverse().map(p => [p.d, usd(p.avg), usd(p.high), usd(p.low)]));
   const c5 = new Map(P.ddr5_contract.map(p => [p.d.slice(0, 7), p]));
   const all4 = P.ddr4_contract;
-  $('c-contract-table').innerHTML = table(['기준월', 'DDR4 8GB High', 'Low', 'Average', '직전 확인월 대비', 'DDR5 16GB Average'],
+  $('c-contract-table').innerHTML = table(['기준월', 'DDR4 8GB High', 'Low', 'Average', '직전 확인월 대비', ...(SHOW_DDR5 ? ['DDR5 16GB Average'] : [])],
     [...all4].reverse().map(p => { const i = all4.indexOf(p), prev = all4[i - 1];
-      return [p.d.slice(0, 7), usd(p.high), usd(p.low), usd(p.avg), prev ? pct((p.avg / prev.avg - 1) * 100) : '-', usd(c5.get(p.d.slice(0, 7))?.avg)]; }));
+      return [p.d.slice(0, 7), usd(p.high), usd(p.low), usd(p.avg), prev ? pct((p.avg / prev.avg - 1) * 100) : '-', ...(SHOW_DDR5 ? [usd(c5.get(p.d.slice(0, 7))?.avg)] : [])]; }));
 }
 
 /* ---------- 입고단가 ---------- */

@@ -215,4 +215,7 @@ def main():
 
 
 if __name__ == '__main__':
+    import sys
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")   # Windows 콘솔(cp949)에서도 ✓ 등을 출력할 수 있게
     main()
