@@ -150,6 +150,11 @@ tbody tr:last-child td { border-bottom: 0; }
 tbody tr:hover td { background-color: var(--hover); }
 td.name { font-weight: 700; }
 td.note { white-space: normal; min-width: 150px; color: var(--sub); font-size: 12.5px; }
+td small { display: block; color: var(--sub); font-size: 12px; font-weight: 400; }
+#chipGuide td.note { min-width: 280px; }   /* 좁은 화면에서 설명 칸이 여러 줄로 길어지지 않게 */
+.guide { margin: 12px 0 0; padding-left: 18px; font-size: 13px; color: var(--sub); }
+.guide li + li { margin-top: 6px; }
+.guide strong { color: var(--text); }
 tr.lot td { color: var(--sub); }
 tr.lot td.name { color: var(--text); }
 tr.total td { font-weight: 800; }
@@ -236,10 +241,17 @@ a:hover { text-decoration: underline; }
         <button class="pill" data-range="30">1개월</button>
       </span>
     </div>
+    <div class="card" id="chipGuideCard">
+      <div class="card-head">
+        <h2><i class="fa-solid fa-circle-question"></i>DDR4 8Gb 칩 1개에 값이 세 가지인 이유</h2>
+        <div class="meta">같은 용량의 칩도 등급과 파는 경로에 따라 값이 다름</div>
+      </div>
+      <div class="card-body" id="chipGuide"></div>
+    </div>
     <div class="card">
       <div class="card-head">
         <h2><i class="fa-solid fa-memory"></i>DDR4 정품 칩 현물가 (8Gb 1Gx8 3200, 칩 1개 USD)</h2>
-        <div class="meta">디램익스체인지 Session Average<br>대형 제조사 정품 칩 기준. 8GB 모듈에는 이 칩이 8개 들어감</div>
+        <div class="meta">디램익스체인지 Session Average<br>시장에 조금 나온 정품 칩의 호가 평균. 8을 곱해도 모듈 가격이 되지 않음</div>
       </div>
       <div class="card-body">
         <div class="legend" id="c-dram-legend"></div>
@@ -250,7 +262,7 @@ a:hover { text-decoration: underline; }
     <div class="card">
       <div class="card-head">
         <h2><i class="fa-solid fa-memory"></i>DDR4 eTT 칩 현물가 (8Gb 1Gx8 eTT, 칩 1개 USD)</h2>
-        <div class="meta">모듈 업체용 등급 칩. 8개면 8GB 모듈, 4개면 4GB 모듈<br>당사 모듈 입고단가와 비교하는 기준</div>
+        <div class="meta">상표 표시 없이 나와 모듈 업체가 직접 검사해 쓰는 칩<br>× 8이 당사 8GB 모듈, × 4가 4GB 모듈 입고단가와 비교하는 기준</div>
       </div>
       <div class="card-body">
         <div class="plot"><canvas id="c-ett" aria-label="DDR4 eTT 칩 현물가 추이"></canvas></div>
@@ -468,7 +480,7 @@ function renderSummary() {
   };
   const contractAge = Math.floor((ts(P.ddr4_spot.at(-1).d) - ts(P.ddr4_contract.at(-1).d)) / 864e5);
   $('priceList').innerHTML = [
-    row('DDR4 정품 칩 현물', '8Gb (1Gx8) 3200 · 칩 1개', P.ddr4_spot, '--s-ddr4'),
+    row('DDR4 정품 칩 현물', '8Gb (1Gx8) 3200 · 칩 1개 · 시장 호가 평균 (× 8은 모듈 가격이 아님)', P.ddr4_spot, '--s-ddr4'),
     P.ett_spot?.length ? row('DDR4 eTT 칩 현물', `8Gb (1Gx8) eTT · 칩 1개 · 8GB 모듈 환산 ${usd(P.ett_spot.at(-1).avg * 8)}`, P.ett_spot, '--s-ett') : '',
     SHOW_DDR5 ? row('DDR5 현물', '16Gb (2Gx8) 4800/5600 · 칩 1개', P.ddr5_spot, '--s-ddr5') : '',
     row('NAND 웨이퍼 현물', '512Gb TLC · 다이 1개(64GB)', P.nand_spot, '--s-nand'),
@@ -621,8 +633,36 @@ const table = (head, rows, left = [0]) => `<table><thead><tr>${head.map((h, i) =
   <tbody>${rows.map(r => `<tr>${r.map((c, i) => `<td${left.includes(i) ? ' class="l"' : ''}>${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
 
 /* ---------- 시장가 추이 ---------- */
+/* 같은 8Gb 칩의 세 가지 값(eTT 현물, 계약가 환산, 정품 현물)을 한 표에 놓고 차이를 설명한다 */
+function renderChipGuide(P) {
+  const e = P.ett_spot?.at(-1), b = P.ddr4_spot.at(-1), c = P.ddr4_contract.at(-1);
+  $('chipGuideCard').hidden = !e || !c;
+  if (!e || !c) return;
+  const cm = c.d.slice(0, 7);
+  const bThen = P.ddr4_spot.filter(p => p.d.slice(0, 7) === cm).at(-1);
+  const ours = (DATA.purchase.receipts[DDR4_8GB] || []).at(-1);
+  const key = (v, name) => `<span class="key"><i style="background:var(${v})"></i></span>${name}`;
+  const rows = [
+    [key('--s-ett', 'eTT 칩 현물가'), usd(e.avg), usd(e.avg * 8),
+     '상표 표시 없이 나오는 칩으로, 모듈 업체가 사서 직접 검사해 씁니다.' + (ours ? ` 당사 8GB 모듈 입고단가(${ours.m} ${usd(ours.price)})가 이 근처입니다.` : '')],
+    [key('--s-contract', '대형 제조사 계약가'), `${usd(c.avg / 8)}<small>모듈 ${usd(c.avg)} ÷ 8</small>`, usd(c.avg),
+     `대형 고객이 제조사와 계약해 받는 값입니다. ${cm} 기준이며 그 뒤는 확인된 값이 없습니다.`],
+    [key('--s-ddr4', '정품 칩 현물가'), `${usd(b.avg)}<small>호가 ${usd(b.low)} ~ ${usd(b.high)}</small>`, usd(b.avg * 8),
+     '계약 물량이 없는 곳이 시장에 조금 나온 정품 칩을 바로 살 때 부르는 값의 평균입니다. 8개 값은 단순 계산이며 모듈 가격이 아닙니다.'],
+  ];
+  $('chipGuide').innerHTML = `<div class="scroll"><table>
+    <thead><tr><th class="l">구분</th><th>칩 1개</th><th>8개 값 (8GB 모듈 분량)</th><th class="l">어떤 값인가</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td class="l name">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td class="l note">${r[3]}</td></tr>`).join('')}</tbody></table></div>
+    <ul class="guide">
+      <li><strong>세 값 모두 같은 용량(8Gb = 1GB)의 칩 1개 값입니다.</strong> 칩의 등급과 파는 경로가 달라 값이 다릅니다.</li>
+      <li><strong>정품 칩 현물가에 8을 곱해도 모듈 가격이 되지 않습니다.</strong> 제조사 물량은 대부분 계약 고객에게 계약가로 가고 현물 시장에는 조금만 나옵니다. 그래서 부르는 값이 ${usd(b.low)}부터 ${usd(b.high)}까지 벌어지고, 그 평균이 ${usd(b.avg)}입니다.${bThen ? ` 호가의 저가는 계약가 ÷ 8과 비슷하게 움직여 왔습니다(${cm} 저가 ${usd(bThen.low)}, 계약가 ÷ 8 ${usd(c.avg / 8)}).` : ''}</li>
+      <li><strong>당사 단가는 eTT × 8과 비교합니다.</strong> 정품 칩 현물가는 시장 전체의 방향을 보는 데만 씁니다.</li>
+    </ul>`;
+}
+
 function drawMarket() {
   const C = colors(), P = DATA.prices;
+  renderChipGuide(P);
   const lastTs = Math.max(ts(P.ddr4_spot.at(-1).d), ts(P.nand_spot.at(-1).d));
   const cut = range === 'all' ? -Infinity : lastTs - Number(range) * 864e5;
   const f = arr => arr.filter(p => ts(p.d) >= cut);
