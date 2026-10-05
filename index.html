@@ -383,9 +383,12 @@ function renderChips() {
     `<span class="chip${stale ? ' stale' : ''}">${stale ? '<i class="fa-solid fa-triangle-exclamation"></i> ' : ''}재고 ${I.computed_at}</span>`,
     DATA.market ? `<span class="chip">동향 ${DATA.market.updated}</span>` : '',
   ].join('');
-  const risky = I.items.filter(it => it.grade === 'critical' || it.grade === 'serious').length;
-  $('riskCount').hidden = !risky;
-  $('riskCount').textContent = risky;
+  const risky = I.items.filter(it => it.grade === 'critical' || it.grade === 'serious');
+  $('riskCount').hidden = !risky.length;
+  $('riskCount').textContent = risky.length;
+  // 숫자에 마우스를 올리면 어떤 품목인지 보인다
+  $('riskCount').parentElement.title = risky.length
+    ? [`위험·발주 필요 품목 ${risky.length}개`, ...risky.map(it => `${it.name} (${GRADE[it.grade]})`)].join('\n') : '';
 }
 
 /* ---------- 확인 필요 알림 ---------- */
