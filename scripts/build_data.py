@@ -46,6 +46,8 @@ CONTRACT_ITEMS = {
     "DDR4 8GB SO-DIMM": "ddr4_contract",
     "DDR5 16GB Module": "ddr5_contract",
 }
+# 재고 관리 대상은 아니지만 입고단가 탭에 차트로 보여 줄 품목
+PRICE_ONLY_ITEMS = [{"code": "JK51-10012C", "name": "DDR4 16GB", "cat": "RAM"}]
 TOL = 0.5          # 수량 비교 허용 오차
 STALE_DAYS = 4     # MRP 계산이 이보다 오래되면 경고
 
@@ -357,7 +359,8 @@ def build_purchase(all_receipts, cfg, codes):
                f"금액은 ${comma(amt)}로 적혀 있습니다. 수량이나 금액 중 하나가 잘못 입력된 것으로 보입니다. "
                f"차트에는 단가 ${comma(price)}를 그대로 썼습니다"}
               for d, code, qty, price, amt in rc.amount_mismatches(slim, codes)]
-    return {"receipts": rc.monthly_receipts(slim, codes), "recent": recent,
+    chart_codes = codes + [it["code"] for it in PRICE_ONLY_ITEMS]
+    return {"receipts": rc.monthly_receipts(slim, chart_codes), "extra_items": PRICE_ONLY_ITEMS, "recent": recent,
             "quotes": read_quotes(QUOTES_XLSX), "issues": issues}
 
 
@@ -390,7 +393,7 @@ def main():
     issues = [{"code": None, "msg": p} for p in problems]
 
     con = scm.connect()
-    all_receipts, added = update_receipts(con, codes)
+    all_receipts, added = update_receipts(con, codes + [it["code"] for it in PRICE_ONLY_ITEMS])
     issues += unassigned_receipts(all_receipts, cfg)
     inventory = build_inventory(con, cfg, all_receipts, issues)
     con.close()
