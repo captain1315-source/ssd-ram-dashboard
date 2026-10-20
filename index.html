@@ -674,7 +674,7 @@ function drawPurchase() {
     ? `입고 <strong>${usd(lo.price)}</strong> (${lo.m}, ${n0(lo.qty)}개) · 계약가 <strong>${usd(lc.avg)}</strong> (${lc.d.slice(0, 7)})<br>계약가 대비 ${pct((lo.price / lc.avg - 1) * 100)}`
     : '';
 
-  const others = INV().items.filter(it => it.code !== DDR4_8GB);
+  const others = INV().items;   // 관리 품목 전체 (DDR4 8GB는 위 비교 차트에도 있음)
   $('itemCharts').innerHTML = others.map(it => { const last = since(it.code).at(-1);
     return `<div class="card">
       <div class="card-head"><h2>${esc(it.name)}</h2><div class="meta">${last ? `최근 ${last.m} · <strong>${usd(last.price)}</strong> · ${n0(last.qty)}개` : '2025년 이후 입고 없음'}</div></div>
