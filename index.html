@@ -83,6 +83,7 @@ main.in { padding: 16px; }
 .stack > * + * { margin-top: 14px; }
 .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 14px; align-items: start; }
 .cols.two { grid-template-columns: repeat(auto-fit, minmax(min(400px, 100%), 1fr)); }
+.cols.three { grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr)); gap: 12px; }
 
 /* 카드 */
 .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; }
@@ -319,7 +320,7 @@ a:hover { text-decoration: underline; }
         <p class="caption">입고단가는 입고이력의 월 가중평균(USD)입니다. 계약가는 TrendForce PC DRAM 모듈 계약가(공개 보도 기준)로 당사 품목과 세그먼트·조건이 달라 방향성 참고용입니다. eTT × 8은 모듈 업체용 등급 칩 8개 값으로, 기판·조립 비용은 포함하지 않습니다.</p>
       </div>
     </div>
-    <div class="cols two" id="itemCharts"></div>
+    <div class="cols three" id="itemCharts"></div>
     <div class="card">
       <div class="card-head"><h2><i class="fa-solid fa-truck-ramp-box"></i>최근 입고</h2><div class="meta">관리 품목, USD 입고분 10건</div></div>
       <div class="scroll" id="recentTable"></div>
@@ -335,7 +336,8 @@ a:hover { text-decoration: underline; }
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <script>
-const MANAGED_FROM = '2025-01';
+// 입고단가는 최근 12개월만 보여 준다 (이번 달 포함)
+const MANAGED_FROM = (() => { const d = new Date(); d.setMonth(d.getMonth() - 11); return d.toISOString().slice(0, 7); })();
 const DDR4_8GB = 'JK51-10012B';
 const SHOW_DDR5 = false;   // DDR5 시세 표시 여부. 자료는 계속 수집하고 화면에서만 숨긴다
 const GRADE = {critical: '위험', serious: '발주 필요', warning: '모니터링', good: '정상'};
@@ -677,9 +679,9 @@ function drawPurchase() {
   const others = INV().items;   // 관리 품목 전체 (DDR4 8GB는 위 비교 차트에도 있음)
   $('itemCharts').innerHTML = others.map(it => { const last = since(it.code).at(-1);
     return `<div class="card">
-      <div class="card-head"><h2>${esc(it.name)}</h2><div class="meta">${last ? `최근 ${last.m} · <strong>${usd(last.price)}</strong> · ${n0(last.qty)}개` : '2025년 이후 입고 없음'}</div></div>
+      <div class="card-head"><h2>${esc(it.name)}</h2><div class="meta">${last ? `최근 ${last.m} · <strong>${usd(last.price)}</strong> · ${n0(last.qty)}개` : '최근 12개월 입고 없음'}</div></div>
       <div class="card-body"><div class="plot small"><canvas id="c-item-${it.code}" aria-label="${esc(it.name)} 입고단가 추이"></canvas></div>
-      <p class="caption">${it.code} · 2025년 1월 이후 월 가중평균(USD)</p></div></div>`; }).join('');
+      <p class="caption">${it.code} · 최근 12개월 월 가중평균(USD)</p></div></div>`; }).join('');
   for (const it of others)
     lineChart('c-item-' + it.code, [{label: '당사 입고단가', color: C.ours, dots: true, points: since(it.code).map(r => ({x: mts(r.m), y: r.price}))}],
               {dateFmt: monthLabel, right: 62});
