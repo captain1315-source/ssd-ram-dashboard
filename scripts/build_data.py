@@ -313,6 +313,19 @@ def build_inventory(con, cfg, all_receipts, issues):
 
 # ---------------------------------------------------------------- 입고단가·견적
 
+# 견적 단가 표의 품목 순서. 여기 없는 품목은 맨 뒤에 구분·스펙 이름순으로 붙는다
+QUOTE_ORDER = [("RAM", "DDR4 4GB"), ("RAM", "DDR4 8GB"), ("RAM", "DDR4 16GB"), ("RAM", "DDR5 8GB"), ("RAM", "DDR5 16GB"),
+               ("SSD", '2.5" 128GB'), ("SSD", '2.5" 256GB'), ("SSD", "M.2 128GB"), ("SSD", "M.2 256GB"), ("SSD", '2.5" 512GB'),
+               ("SSD", "NVMe M.2 128GB"), ("SSD", "NVMe M.2 256GB")]
+
+
+def quote_sort_key(k):
+    """(구분, 스펙, 제조사) → 정해진 품목 순서, 같은 품목 안에서는 제조사 이름순"""
+    item = (k[0], k[1])
+    rank = QUOTE_ORDER.index(item) if item in QUOTE_ORDER else len(QUOTE_ORDER)
+    return (rank, str(k[0]), str(k[1]), k[2])
+
+
 def read_quotes(path):
     """단가현황 목록(날짜·제조사·구분·스펙·단가) → 제조사 × 월 표. 같은 달에는 가장 늦은 날짜의 단가."""
     ws = openpyxl.load_workbook(path, data_only=True)["단가현황"]
@@ -326,7 +339,7 @@ def read_quotes(path):
     months = sorted({m for _, m in last})
     return {"months": months,
             "rows": [{"cat": k[0], "spec": k[1], "maker": names[k], "p": [r2(last.get((k, m))) for m in months]}
-                     for k in sorted(names)]}
+                     for k in sorted(names, key=quote_sort_key)]}
 
 
 def build_purchase(all_receipts, cfg, codes):
