@@ -278,7 +278,8 @@ def test_table_update_reads_date_and_hour():
 def test_closing_session_rows_are_recorded_with_table_date():
     rows, skipped = fp.new_rows(PAGE.format(time="18:10"), set())
     by_item = {r[2]: r for r in rows}
-    assert set(by_item) == {"DDR4 8Gb (1Gx8) 3200", "DDR4 8Gb (1Gx8) eTT", "DDR5 16Gb (2Gx8) 4800/5600", "512Gb TLC"}
+    assert set(by_item) == {"DDR4 8Gb (1Gx8) 3200", "DDR4 8Gb (1Gx8) eTT", "DDR5 16Gb (2Gx8) 4800/5600", "DDR5 16Gb (2Gx8) eTT", "512Gb TLC"}
+    assert by_item["DDR5 16Gb (2Gx8) eTT"][7] == 26.1
     ett = by_item["DDR4 8Gb (1Gx8) eTT"]
     assert ett[0].strftime("%Y-%m-%d") == "2026-10-02" and ett[1] == "DRAM Spot"
     assert ett[3:9] == [6.35, 5.70, 6.35, 5.70, 5.94, 0.0034]
@@ -293,7 +294,7 @@ def test_intraday_dram_values_are_recorded_with_a_session_note():
     # 하루 한 번 오후 4시에 받으면 그날의 14:40 세션 값이 보인다
     rows, skipped = fp.new_rows(PAGE.format(time="14:40"), set())
     by_item = {r[2]: r for r in rows}
-    assert len(rows) == 4 and skipped == []
+    assert len(rows) == 5 and skipped == []
     assert by_item["DDR4 8Gb (1Gx8) eTT"][11] == "14시 세션 값 (마감 전)"
     assert by_item["512Gb TLC"][11] is None
 
@@ -306,12 +307,12 @@ def test_closing_session_rows_have_no_note():
 def test_rows_already_in_excel_are_not_added_again():
     have = {("DDR4 8Gb (1Gx8) 3200", "2026-10-02"), ("512Gb TLC", "2026-09-28")}
     rows, _ = fp.new_rows(PAGE.format(time="18:10"), have)
-    assert sorted(r[2] for r in rows) == ["DDR4 8Gb (1Gx8) eTT", "DDR5 16Gb (2Gx8) 4800/5600"]
+    assert sorted(r[2] for r in rows) == ["DDR4 8Gb (1Gx8) eTT", "DDR5 16Gb (2Gx8) 4800/5600", "DDR5 16Gb (2Gx8) eTT"]
 
 
 def test_missing_table_is_reported_not_guessed():
     rows, skipped = fp.new_rows("nothing here", set())
-    assert rows == [] and len(skipped) == 4
+    assert rows == [] and len(skipped) == 5
 
 
 def test_prices_are_fetched_once_a_day_after_4pm():

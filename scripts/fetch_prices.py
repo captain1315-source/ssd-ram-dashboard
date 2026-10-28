@@ -26,6 +26,7 @@ ITEMS = {
     "DDR4 8Gb (1Gx8) 3200": ("DRAM Spot Price", r"DDR4 8Gb \(1Gx8\) 3200", "DRAM Spot"),
     "DDR4 8Gb (1Gx8) eTT": ("DRAM Spot Price", r"DDR4 8Gb \(1Gx8\) eTT", "DRAM Spot"),
     "DDR5 16Gb (2Gx8) 4800/5600": ("DRAM Spot Price", r"DDR5 16Gb \(2Gx8\) 4800/5600", "DRAM Spot"),
+    "DDR5 16Gb (2Gx8) eTT": ("DRAM Spot Price", r"DDR5 16Gb \(2Gx8\) eTT", "DRAM Spot"),
     "512Gb TLC": ("Wafer Spot Price", r"512Gb TLC", "NAND Wafer Spot"),
 }
 

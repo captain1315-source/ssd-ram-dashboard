@@ -40,11 +40,12 @@ SPOT_ITEMS = {
     "DDR4 8Gb (1Gx8) 3200": "ddr4_spot",
     "DDR4 8Gb (1Gx8) eTT": "ett_spot",       # 모듈 업체용 등급 칩. ×8이 8GB 모듈 매입가와 비교되는 수준
     "DDR5 16Gb (2Gx8) 4800/5600": "ddr5_spot",
+    "DDR5 16Gb (2Gx8) eTT": "ddr5_ett_spot",
     "512Gb TLC": "nand_spot",
 }
 CONTRACT_ITEMS = {
     "DDR4 8GB SO-DIMM": "ddr4_contract",
-    "DDR5 16GB Module": "ddr5_contract",
+    "DDR5 8GB SO-DIMM": "ddr5_contract",      # TrendForce 공개 표 (DDR4 8GB SO-DIMM과 같은 표)
 }
 # 재고 관리 대상은 아니지만 입고단가 탭에 차트로 보여 줄 품목
 PRICE_ONLY_ITEMS = [{"code": "JK51-10012C", "name": "DDR4 16GB", "cat": "RAM"}]

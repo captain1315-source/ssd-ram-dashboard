@@ -1830,6 +1830,7 @@
     "low": 47.3
    }
   ],
+  "ddr5_ett_spot": [],
   "nand_spot": [
    {
     "d": "2025-08-25",
@@ -2280,18 +2281,81 @@
   ],
   "ddr5_contract": [
    {
-    "d": "2026-03-31",
-    "avg": 142,
+    "d": "2025-09-30",
+    "avg": 26.75,
     "high": null,
     "low": null,
-    "src": "TrendForce/The Elec 2026-05-03"
+    "src": "TrendForce DRAM Contract Price (2H Sep: 2H Oct 표의 변동률 25.23%로 역산, High/Low 미확인)"
+   },
+   {
+    "d": "2025-10-31",
+    "avg": 33.5,
+    "high": 37,
+    "low": 29,
+    "src": "TrendForce DRAM Contract Price (2H Oct), web.archive.org 확인"
+   },
+   {
+    "d": "2025-11-28",
+    "avg": 36.5,
+    "high": 39.5,
+    "low": 34,
+    "src": "TrendForce DRAM Contract Price (2H Nov), web.archive.org 확인"
+   },
+   {
+    "d": "2025-12-31",
+    "avg": 39.5,
+    "high": 42.5,
+    "low": 37,
+    "src": "TrendForce DRAM Contract Price (2H Dec), web.archive.org 확인"
+   },
+   {
+    "d": "2026-01-30",
+    "avg": 75,
+    "high": 78.5,
+    "low": 72.5,
+    "src": "TrendForce DRAM Contract Price (2H Jan), web.archive.org 확인"
+   },
+   {
+    "d": "2026-02-26",
+    "avg": 75,
+    "high": null,
+    "low": 72.5,
+    "src": "TrendForce DRAM Contract Price (2H Feb: 2H Mar 표의 변동률 0%로 확인, High 미확인)"
+   },
+   {
+    "d": "2026-03-31",
+    "avg": 75,
+    "high": 78.5,
+    "low": 72.5,
+    "src": "TrendForce DRAM Contract Price (2H Mar), web.archive.org 확인"
    },
    {
     "d": "2026-04-30",
-    "avg": 201,
+    "avg": 109,
+    "high": 120,
+    "low": 96,
+    "src": "TrendForce DRAM Contract Price (2H Apr), web.archive.org 확인"
+   },
+   {
+    "d": "2026-06-30",
+    "avg": 115,
     "high": null,
-    "low": null,
-    "src": "TrendForce/The Elec 2026-05-03"
+    "low": 102,
+    "src": "TrendForce DRAM Contract Price (2H Jun: 2H Jul 표의 변동률로 역산, High 미확인)"
+   },
+   {
+    "d": "2026-07-31",
+    "avg": 130,
+    "high": 138,
+    "low": 116,
+    "src": "TrendForce DRAM Contract Price (2H Jul), web.archive.org 확인"
+   },
+   {
+    "d": "2026-08-31",
+    "avg": 133,
+    "high": 141,
+    "low": 118,
+    "src": "TrendForce DRAM Contract Price (2H Aug, trendforce.com 현재 공개 표), web.archive.org 확인"
    }
   ]
  },
