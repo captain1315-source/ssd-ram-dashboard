@@ -3699,7 +3699,7 @@
       null,
       38.5,
       25,
-      null
+      22
      ]
     },
     {
@@ -3807,7 +3807,7 @@
       null,
       52,
       47.5,
-      null
+      38.5
      ]
     },
     {
@@ -3844,6 +3844,24 @@
       null,
       null,
       null
+     ]
+    },
+    {
+     "cat": "RAM",
+     "spec": "DDR5 8GB",
+     "maker": "Kernel&core",
+     "p": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      122
      ]
     },
     {
