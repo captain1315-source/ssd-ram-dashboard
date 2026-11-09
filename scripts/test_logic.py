@@ -12,6 +12,7 @@ from inventory import (consume, grade, group_demand, model_token, net_received, 
                        total_ends, usage_for, usage_sums, worst)
 import fetch_prices as fp
 import publish
+import build_data
 from receipts import amount_mismatches, merge, monthly_receipts, resolve_maker
 
 
@@ -313,6 +314,18 @@ def test_rows_already_in_excel_are_not_added_again():
 def test_missing_table_is_reported_not_guessed():
     rows, skipped = fp.new_rows("nothing here", set())
     assert rows == [] and len(skipped) == 5
+
+
+def test_maker_rows_use_latest_snapshot_not_after_base_month():
+    rows = [{"maker": "A", "usage": "국내", "qty": 10, "as_of": "2026-10-01"},
+            {"maker": "B", "usage": "해외", "qty": 20, "as_of": "2026-10-01"},
+            {"maker": "A", "usage": "국내", "qty": 7, "as_of": "2026-12-01"},
+            {"maker": "B", "usage": "해외", "qty": 25, "as_of": "2026-12-01"}]
+    cfg = {"makers": {"X": rows}}
+    assert [r["qty"] for r in build_data.maker_rows(cfg, "X", "2026-11-01")] == [10, 20]   # 12월 묶음은 아직 안 씀
+    assert [r["qty"] for r in build_data.maker_rows(cfg, "X", "2026-12-01")] == [7, 25]
+    assert build_data.baseline(cfg, "X", "2026-12-01") == "2026-12-01"
+    assert build_data.maker_rows(cfg, "Y", "2026-12-01") == []
 
 
 def test_prices_are_fetched_once_a_day_after_4pm():

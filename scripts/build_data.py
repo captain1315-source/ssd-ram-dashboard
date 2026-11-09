@@ -159,7 +159,7 @@ def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, netted, sop, is
     }
 
     # ---- 모델별 우선 제조사: 설정의 '모델제조사' 규칙 중 이 품목에 등록된 제조사만 적용
-    makers = cfg["makers"].get(code, [])
+    makers = maker_rows(cfg, code, base)
     registered = {rc.norm_maker(mk["maker"]): mk["maker"] for mk in makers}
     rules = [(r["match"].lower(), registered[rc.norm_maker(r["maker"])]) for r in cfg["model_maker"]
              if r["code"] in (None, code) and rc.norm_maker(r["maker"]) in registered]
@@ -351,14 +351,14 @@ def read_quotes(path):
                      for k in sorted(names, key=quote_sort_key)]}
 
 
-def build_purchase(all_receipts, cfg, codes):
+def build_purchase(all_receipts, cfg, codes, base):
     slim = [(r["입고일"], r["품번"], r["통화"], r["수량"], r["금액"], r["단가"]) for r in all_receipts]
     usd = [r for r in all_receipts if r["품번"] in codes and r["통화"] == "USD" and r["수량"] and r["금액"]]
     recent = [{"d": r["입고일"], "code": r["품번"], "qty": r2(r["수량"]),
                "price": round(rc.unit_price(r["수량"], r["금액"], r["단가"]), 2),
                "maker": rc.resolve_maker(r["품번"], r["거래처"], cfg, r["입고번호"], r["비고"]),
                # 기초수량 기준일 이후 입고만 제조사 지정이 필요하다 (그 전 입고는 기초수량에 이미 포함)
-               "needs_maker": r["입고일"] >= baseline(cfg, r["품번"]),
+               "needs_maker": r["입고일"] >= baseline(cfg, r["품번"], base),
                "vendor": short_vendor(r["거래처"]), "no": r["입고번호"]}
               for r in sorted(usd, key=lambda r: r["입고일"])[-10:]][::-1]
     issues = [{"code": code, "msg":
@@ -371,16 +371,29 @@ def build_purchase(all_receipts, cfg, codes):
             "quotes": read_quotes(QUOTES_XLSX), "issues": issues}
 
 
-def baseline(cfg, code):
-    """품목의 기초수량 기준일. 없으면 어떤 날짜보다도 뒤로 취급되는 값."""
-    return max((mk["as_of"] for mk in cfg["makers"].get(code, []) if mk["as_of"]), default="9999")
+def maker_rows(cfg, code, base):
+    """제조사 시트에서 이 품목의 기초수량 묶음을 고른다.
+
+    같은 품목에 기준일이 다른 묶음이 여러 개 있으면, 기준일이 MRP 기준월을 넘지 않는 것 중 가장 최근 묶음을 쓴다.
+    월말에 다음 달 1일자 실사 수량을 새 줄로 미리 넣어 두면 MRP 기준월이 그 달로 넘어갈 때부터 적용된다.
+    """
+    rows = cfg["makers"].get(code, [])
+    dates = sorted({r["as_of"] for r in rows if r["as_of"]})
+    usable = [d for d in dates if d[:7] <= base[:7]]
+    pick = usable[-1] if usable else (dates[0] if dates else None)
+    return [r for r in rows if r["as_of"] in (pick, None)] if pick else rows
 
 
-def unassigned_receipts(all_receipts, cfg):
+def baseline(cfg, code, base):
+    """품목의 기초수량 기준일 (지금 쓰는 묶음). 없으면 어떤 날짜보다도 뒤로 취급되는 값."""
+    return max((mk["as_of"] for mk in maker_rows(cfg, code, base) if mk["as_of"]), default="9999")
+
+
+def unassigned_receipts(all_receipts, cfg, base):
     """기초수량 기준일 이후 입고 중 제조사를 정할 수 없는 건"""
     out = []
     for r in all_receipts:
-        if r["입고일"] >= baseline(cfg, r["품번"]) and \
+        if r["입고일"] >= baseline(cfg, r["품번"], base) and \
                 not rc.resolve_maker(r["품번"], r["거래처"], cfg, r["입고번호"], r["비고"]):
             out.append({"code": r["품번"], "msg":
                         f"제조사 미지정 입고: {r['입고일']} {short_vendor(r['거래처'])} {comma(r['수량'])}개 "
@@ -401,14 +414,15 @@ def main():
 
     con = scm.connect()
     all_receipts, added = update_receipts(con, codes + [it["code"] for it in PRICE_ONLY_ITEMS])
-    issues += unassigned_receipts(all_receipts, cfg)
+    base = scm.base_month(con)
+    issues += unassigned_receipts(all_receipts, cfg, base)
     inventory = build_inventory(con, cfg, all_receipts, issues)
     con.close()
 
     prices = read_prices(PRICE_XLSX)
     market = json.loads(MARKET_JSON.read_text(encoding="utf-8")) if MARKET_JSON.exists() else None
     data = {"prices": prices, "inventory": inventory,
-            "purchase": build_purchase(all_receipts, cfg, codes), "market": market}
+            "purchase": build_purchase(all_receipts, cfg, codes, base), "market": market}
     text = json.dumps(data, ensure_ascii=False, indent=1)
 
     OUT.parent.mkdir(exist_ok=True)
