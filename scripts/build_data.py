@@ -51,6 +51,8 @@ CONTRACT_ITEMS = {
 PRICE_ONLY_ITEMS = [{"code": "JK51-10012C", "name": "DDR4 16GB", "cat": "RAM"}]
 TOL = 0.5          # 수량 비교 허용 오차
 GAP_ABSORB = 20    # 제조사별 합계와 시스템 재고의 차이가 이 수량(또는 재고의 1%) 이하면 안내 없이 맞춘다
+# 시스템 재고에서 빼는 창고 (창고 이름에 이 글자가 들어가면 제외). 아카츠키 전용 보관분은 일반 생산에 쓰지 않는다
+EXCLUDE_WAREHOUSES = ["아카츠키"]
 STALE_DAYS = 4     # MRP 계산이 이보다 오래되면 경고
 
 
@@ -279,6 +281,15 @@ def build_inventory(con, cfg, all_receipts, issues):
     codes = [it["code"] for it in cfg["items"]]
     base = scm.base_month(con)
     mrp_now = scm.mrp(con, base, codes)
+    # 시스템 재고에는 들어 있지만 대시보드에서는 쓰지 않는 창고(아카츠키 전용 보관 등)의 수량을 월초재고에서 뺀다
+    snap_day, held = scm.warehouse_stock(con, base, codes, EXCLUDE_WAREHOUSES)
+    names = {it["code"]: it["name"] for it in cfg["items"]}
+    excluded = []
+    for code, rows in held.items():
+        if code in mrp_now:
+            qty = sum(q for _, q in rows)
+            mrp_now[code] = dict(mrp_now[code], carry_stock=max(mrp_now[code]["carry_stock"] - qty, 0))
+            excluded.append(f"{names[code]} {comma(qty)}개")
     uploads = scm.upload_times(con)
     sop = scm.sop_by_model(con, codes)
 
@@ -295,7 +306,6 @@ def build_inventory(con, cfg, all_receipts, issues):
                        f"새 모델 {', '.join(sorted(u['models']))}: 국내용인지 해외용인지 아직 정해지지 않았습니다. "
                        f"설정.xlsx › 모델용도 시트 첫 칸에 '{token}'(또는 그 앞부분)을 적고 둘째 칸에 국내 또는 해외를 적어 주세요. "
                        f"(이 모델의 소요: {where})"})
-    names = {it["code"]: it["name"] for it in cfg["items"]}
     adjustments = [f"{names[n['code']]}: {n['date']} 입고 {comma(n['qty'])}개를 {short_vendor(n['vendor'])} 발주"
                    f"(납기 {n['due']})의 입고대기에서 뺐습니다. 발주 자료({po_at})가 그 입고보다 먼저 올라와 있습니다"
                    for n in netted]
@@ -320,6 +330,7 @@ def build_inventory(con, cfg, all_receipts, issues):
         "items": items,
         "pos": open_pos,
         "adjustments": adjustments,
+        "excluded": {"date": snap_day, "items": excluded} if excluded else None,
         "issues": issues,
     }
 

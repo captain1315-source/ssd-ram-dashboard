@@ -575,8 +575,9 @@ function renderInventory() {
       usageBadge(g.usage) + (g.prefer ? ` <span class="badge b-line">${esc(g.prefer)} 먼저</span>` : ''), ...g.demand.map(n0)])), [0, 1]);
 
   const adj = I.adjustments || [];
-  $('adjustNote').hidden = !adj.length;
-  $('adjustNote').innerHTML = adj.map(a => `<i class="fa-solid fa-circle-info"></i> 입고대기 보정 · ${esc(a)}`).join('<br>');
+  const ex = I.excluded ? [`<i class="fa-solid fa-circle-info"></i> 월초재고에서 아카츠키 보관창고 재고 제외 · ${esc(I.excluded.items.join(', '))}`] : [];
+  $('adjustNote').hidden = !adj.length && !ex.length;
+  $('adjustNote').innerHTML = ex.concat(adj.map(a => `<i class="fa-solid fa-circle-info"></i> 입고대기 보정 · ${esc(a)}`)).join('<br>');
 
   const money = p => p.price == null ? '-' : p.currency === 'USD' ? usd(p.price) : n0(p.price) + (p.currency === 'KRW' ? '원' : '');
   $('poCard').hidden = !I.pos.length;

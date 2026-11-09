@@ -38,6 +38,24 @@ def mrp(con, month, codes):
     return {r["item_code"]: dict(r) for r in rows}
 
 
+def warehouse_stock(con, month, codes, keywords):
+    """기준월에 찍힌 가장 최근 창고별 재고 스냅샷에서, 창고 이름에 keywords 중 하나가 들어간 창고의 수량.
+
+    반환: (스냅샷 날짜 또는 None, {품번: [(창고, 수량), ...]})
+    """
+    row = con.execute("select max(snapshot_date) from stock_snapshots where snapshot_date like ?",
+                      (month[:7] + "%",)).fetchone()
+    day = row[0] if row else None
+    out = {}
+    if not day or not keywords:
+        return day, out
+    for r in con.execute(f"select item_code, warehouse_code, qty from stock_snapshots where snapshot_date=? "
+                         f"and item_code in ({_in(codes)})", (day, *codes)):
+        if any(k in r["warehouse_code"] for k in keywords) and r["qty"]:
+            out.setdefault(r["item_code"], []).append((r["warehouse_code"], r["qty"]))
+    return day, out
+
+
 def receipts(con, codes):
     """현재 DB에 있는 입고 내역. 업로드할 때마다 통째로 교체되는 테이블이라 누적은 호출하는 쪽에서 한다."""
     rows = con.execute(
