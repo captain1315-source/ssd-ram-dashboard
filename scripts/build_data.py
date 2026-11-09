@@ -378,7 +378,8 @@ def maker_rows(cfg, code, base):
     월말에 다음 달 1일자 실사 수량을 새 줄로 미리 넣어 두면 MRP 기준월이 그 달로 넘어갈 때부터 적용된다.
     """
     rows = cfg["makers"].get(code, [])
-    dates = sorted({r["as_of"] for r in rows if r["as_of"]})
+    # 기초수량을 하나도 적지 않은 묶음(미리 만들어 둔 빈 입력칸)은 고르지 않는다
+    dates = sorted({r["as_of"] for r in rows if r["as_of"] and r["qty"] is not None})
     usable = [d for d in dates if d[:7] <= base[:7]]
     pick = usable[-1] if usable else (dates[0] if dates else None)
     return [r for r in rows if r["as_of"] in (pick, None)] if pick else rows

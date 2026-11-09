@@ -326,6 +326,9 @@ def test_maker_rows_use_latest_snapshot_not_after_base_month():
     assert [r["qty"] for r in build_data.maker_rows(cfg, "X", "2026-12-01")] == [7, 25]
     assert build_data.baseline(cfg, "X", "2026-12-01") == "2026-12-01"
     assert build_data.maker_rows(cfg, "Y", "2026-12-01") == []
+    # 빈 입력칸만 있는 다음 달 묶음은 그 달이 되어도 쓰지 않는다
+    blank = rows[:2] + [{"maker": "A", "usage": "국내", "qty": None, "as_of": "2027-01-01"}]
+    assert [r["qty"] for r in build_data.maker_rows({"makers": {"X": blank}}, "X", "2027-01-01")] == [10, 20]
 
 
 def test_prices_are_fetched_once_a_day_after_4pm():
