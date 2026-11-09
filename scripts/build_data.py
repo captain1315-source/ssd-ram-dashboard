@@ -220,9 +220,13 @@ def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, netted, sop, is
         max(lots, key=lambda l: l["stock"])["stock"] -= gap
     elif abs(gap) > TOL:
         now = ", ".join(f"{l['maker']} {comma(l['stock'])}" for l in lots)
-        issues.append({"code": code, "msg": f"제조사별 계산 재고 합계가 시스템 월초재고 {comma(m['carry_stock'])}개와 {comma(gap)}개 차이 납니다. "
-                                            f"설정.xlsx › 제조사 시트에서 {code} 행들의 기준일을 {base}로 바꾸고, 기초수량에 그날 제조사별 실사 수량을 적어 주세요. "
-                                            f"(지금 계산값: {now})"})
+        if as_of[:7] == base[:7]:   # 이달 1일자 수량을 직접 넣었는데 합계가 다른 경우
+            msg = (f"설정.xlsx › 제조사 시트에 넣은 {as_of} 기초수량 합계 {comma(sum(l['stock'] for l in lots))}개가 "
+                   f"시스템 월초재고 {comma(m['carry_stock'])}개와 {comma(gap)}개 다릅니다. 빠진 창고나 제조사가 없는지 확인해 주세요. ({now})")
+        else:
+            msg = (f"제조사별 계산 재고 합계가 시스템 월초재고 {comma(m['carry_stock'])}개와 {comma(gap)}개 차이 납니다. "
+                   f"설정.xlsx › 제조사 시트에 {base} 기준 줄을 추가해 그날 제조사별 재고를 적어 주세요. (지금 계산값: {now})")
+        issues.append({"code": code, "msg": msg})
 
     # ---- 제조사별 입고: 당월 입고(실적), 입고대기(당월 납기 발주잔량), M+1~M+5 발주
     received = top_up(received_in(base), m["receipt_qty"])
