@@ -50,6 +50,7 @@ CONTRACT_ITEMS = {
 # 재고 관리 대상은 아니지만 입고단가 탭에 차트로 보여 줄 품목
 PRICE_ONLY_ITEMS = [{"code": "JK51-10012C", "name": "DDR4 16GB", "cat": "RAM"}]
 TOL = 0.5          # 수량 비교 허용 오차
+GAP_ABSORB = 20    # 제조사별 합계와 시스템 재고의 차이가 이 수량(또는 재고의 1%) 이하면 안내 없이 맞춘다
 STALE_DAYS = 4     # MRP 계산이 이보다 오래되면 경고
 
 
@@ -214,9 +215,14 @@ def build_item(item, cfg, con, base, mrp_now, all_receipts, pos, netted, sop, is
         month = scm.month_add(month, 1)
 
     gap = sum(l["stock"] for l in lots) - m["carry_stock"]
-    if abs(gap) > TOL:
-        issues.append({"code": code, "msg": f"제조사별 재고 합계가 시스템 월초재고 {comma(m['carry_stock'])}와 "
-                                            f"{comma(gap)} 차이 납니다. 설정의 기초수량을 새로 적어 주세요"})
+    if abs(gap) > TOL and abs(gap) <= max(GAP_ABSORB, m["carry_stock"] * 0.01):
+        # 작은 차이는 반올림·배분 오차로 보고 가장 큰 재고에 흡수시킨다 (안내하지 않음)
+        max(lots, key=lambda l: l["stock"])["stock"] -= gap
+    elif abs(gap) > TOL:
+        now = ", ".join(f"{l['maker']} {comma(l['stock'])}" for l in lots)
+        issues.append({"code": code, "msg": f"제조사별 계산 재고 합계가 시스템 월초재고 {comma(m['carry_stock'])}개와 {comma(gap)}개 차이 납니다. "
+                                            f"설정.xlsx › 제조사 시트에서 {code} 행들의 기준일을 {base}로 바꾸고, 기초수량에 그날 제조사별 실사 수량을 적어 주세요. "
+                                            f"(지금 계산값: {now})"})
 
     # ---- 제조사별 입고: 당월 입고(실적), 입고대기(당월 납기 발주잔량), M+1~M+5 발주
     received = top_up(received_in(base), m["receipt_qty"])
@@ -283,7 +289,7 @@ def build_inventory(con, cfg, all_receipts, issues):
         where = ", ".join(f"{name} {comma(qty)}개" for name, qty in u["items"].items())
         issues.append({"code": None, "msg":
                        f"새 모델 {', '.join(sorted(u['models']))}: 국내용인지 해외용인지 아직 정해지지 않았습니다. "
-                       f"설정 파일 '모델용도' 시트에 '{token}' 한 줄을 추가하고 국내 또는 해외를 적어 주세요. "
+                       f"설정.xlsx › 모델용도 시트 첫 칸에 '{token}'(또는 그 앞부분)을 적고 둘째 칸에 국내 또는 해외를 적어 주세요. "
                        f"(이 모델의 소요: {where})"})
     names = {it["code"]: it["name"] for it in cfg["items"]}
     adjustments = [f"{names[n['code']]}: {n['date']} 입고 {comma(n['qty'])}개를 {short_vendor(n['vendor'])} 발주"

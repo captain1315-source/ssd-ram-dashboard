@@ -429,10 +429,23 @@ function renderChips() {
     ? [`위험·발주 필요 품목 ${risky.length}개`, ...risky.map(it => `${it.name} (${GRADE[it.grade]})`)].join('\n') : '';
 }
 
-/* ---------- 확인 필요 알림 ---------- */
+/* ---------- 확인 필요 알림 (관리자 모드에서만) ---------- */
+// 주소 끝에 ?admin=1 을 붙여 한 번 열면 그 브라우저에서 관리자 모드가 유지된다. ?admin=0 으로 끈다.
+// 화면 표시만 가리는 것이며 보안 장치는 아니다.
+const ADMIN = (() => {
+  const q = new URLSearchParams(location.search).get('admin');
+  try {
+    if (q === '1') localStorage.setItem('ssdram-admin', '1');
+    if (q === '0') localStorage.removeItem('ssdram-admin');
+    return localStorage.getItem('ssdram-admin') === '1';
+  } catch (e) { return q === '1'; }
+})();
+
 function noticeHtml(issues) {
-  return issues.length ? `<div class="notice"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>확인 필요</strong><ul>${issues.map(i =>
-    `<li>${i.code ? `${esc(itemName(i.code))} (${i.code}): ` : ''}${esc(i.msg)}</li>`).join('')}</ul></div></div>` : '';
+  if (!ADMIN || !issues.length) return '';
+  return `<div class="notice"><i class="fa-solid fa-triangle-exclamation"></i><div><strong>확인 필요 (관리자에게만 보임)</strong><ul>${issues.map(i =>
+    `<li>${i.code ? `${esc(itemName(i.code))} (${i.code}): ` : ''}${esc(i.msg)}</li>`).join('')}</ul>
+    <p class="caption" style="margin-top:6px">설정 파일: E:\\Claude\\Code\\SSD RAM\\원본\\설정.xlsx · 저장하면 매시간 10분에 반영 · 바로 반영: python scripts\\publish.py --now</p></div></div>`;
 }
 
 function renderAlerts() {

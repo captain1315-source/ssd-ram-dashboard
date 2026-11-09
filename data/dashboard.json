@@ -2637,16 +2637,16 @@
      {
       "maker": "Kernel & Core",
       "usage": "공용",
-      "open": 3035,
+      "open": 3054,
       "received": 0,
       "pending": 0,
       "end": [
-       2983,
-       2947,
-       2717,
-       2487,
-       2274.96,
-       2062.93
+       3002,
+       2966,
+       2736,
+       2506,
+       2293.96,
+       2081.93
       ],
       "grade": "good",
       "short_idx": null
@@ -2764,12 +2764,9 @@
     "code": "JK50-10033A",
     "name": "SSD M.2 256GB",
     "cat": "SSD",
-    "grade": "critical",
-    "short_idx": 2,
-    "short_lot": {
-     "maker": "Transcend",
-     "usage": "공용"
-    },
+    "grade": "serious",
+    "short_idx": 3,
+    "short_lot": null,
     "total": {
      "open": 174,
      "received": 0,
@@ -2795,19 +2792,19 @@
      {
       "maker": "Transcend",
       "usage": "공용",
-      "open": 171,
+      "open": 174,
       "received": 0,
       "pending": 0,
       "end": [
-       111,
-       51,
-       -1.83,
-       -41.83,
-       -94.67,
-       -147.5
+       114,
+       54,
+       1.17,
+       -38.83,
+       -91.67,
+       -144.5
       ],
-      "grade": "critical",
-      "short_idx": 2
+      "grade": "serious",
+      "short_idx": 3
      }
     ],
     "usage_demand": [
@@ -2987,16 +2984,16 @@
      {
       "maker": "Crucial",
       "usage": "해외",
-      "open": 2948,
+      "open": 2945,
       "received": 0,
       "pending": 0,
       "end": [
-       2948,
-       2698,
-       2518,
-       2383,
-       2218.67,
-       2054.33
+       2945,
+       2695,
+       2515,
+       2380,
+       2215.67,
+       2051.33
       ],
       "grade": "good",
       "short_idx": null
@@ -3059,24 +3056,12 @@
   "adjustments": [],
   "issues": [
    {
-    "code": "JK50-10024A",
-    "msg": "제조사별 재고 합계가 시스템 월초재고 4,734와 -19 차이 납니다. 설정의 기초수량을 새로 적어 주세요"
-   },
-   {
-    "code": "JK50-10033A",
-    "msg": "제조사별 재고 합계가 시스템 월초재고 174와 -3 차이 납니다. 설정의 기초수량을 새로 적어 주세요"
-   },
-   {
-    "code": "JK51-10012B",
-    "msg": "제조사별 재고 합계가 시스템 월초재고 5,416와 3 차이 납니다. 설정의 기초수량을 새로 적어 주세요"
+    "code": null,
+    "msg": "새 모델 TOPAZ-1260/DPNNNMNB, TOPAZ-1270/DPNNNMNB: 국내용인지 해외용인지 아직 정해지지 않았습니다. 설정.xlsx › 모델용도 시트 첫 칸에 'DPNNNMNB'(또는 그 앞부분)을 적고 둘째 칸에 국내 또는 해외를 적어 주세요. (이 모델의 소요: DDR4 8GB 50개)"
    },
    {
     "code": null,
-    "msg": "새 모델 TOPAZ-1260/DPNNNMNB, TOPAZ-1270/DPNNNMNB: 국내용인지 해외용인지 아직 정해지지 않았습니다. 설정 파일 '모델용도' 시트에 'DPNNNMNB' 한 줄을 추가하고 국내 또는 해외를 적어 주세요. (이 모델의 소요: DDR4 8GB 50개)"
-   },
-   {
-    "code": null,
-    "msg": "새 모델 TOPAZ-1260/ITENNNMNB: 국내용인지 해외용인지 아직 정해지지 않았습니다. 설정 파일 '모델용도' 시트에 'ITENNNMNB' 한 줄을 추가하고 국내 또는 해외를 적어 주세요. (이 모델의 소요: DDR4 8GB 10개)"
+    "msg": "새 모델 TOPAZ-1260/ITENNNMNB: 국내용인지 해외용인지 아직 정해지지 않았습니다. 설정.xlsx › 모델용도 시트 첫 칸에 'ITENNNMNB'(또는 그 앞부분)을 적고 둘째 칸에 국내 또는 해외를 적어 주세요. (이 모델의 소요: DDR4 8GB 10개)"
    }
   ]
  },
