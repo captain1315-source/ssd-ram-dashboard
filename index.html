@@ -65,6 +65,7 @@ button { font-family: inherit; }
 .chip.stale { color: var(--warn-fg); background: var(--warn-bg); border-color: transparent; }
 .icon-btn { width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--border); background: var(--card); color: var(--sub); cursor: pointer; font-size: 15px; }
 .icon-btn:hover { background: var(--hover); color: var(--text); }
+.icon-btn.on { color: var(--primary); border-color: var(--primary); }
 .icon-btn:active, .pill:active { transform: scale(.97); }
 @media (max-width: 720px) {
   .chips { order: 3; flex-basis: 100%; justify-content: flex-start; }
@@ -187,6 +188,7 @@ a:hover { text-decoration: underline; }
   <div class="in">
     <div class="brand"><i class="fa-solid fa-microchip"></i><span>SSD·RAM <em>수급·시장</em></span></div>
     <div class="chips" id="chips"></div>
+    <button class="icon-btn" id="adminBtn" aria-label="관리자 모드"><i class="fa-solid fa-lock"></i></button>
     <button class="icon-btn" id="themeBtn" aria-label="밝은 테마와 어두운 테마 전환"><i class="fa-solid fa-moon"></i></button>
   </div>
 </header>
@@ -430,8 +432,9 @@ function renderChips() {
 }
 
 /* ---------- 확인 필요 알림 (관리자 모드에서만) ---------- */
-// 주소 끝에 ?admin=1 을 붙여 한 번 열면 그 브라우저에서 관리자 모드가 유지된다. ?admin=0 으로 끈다.
-// 화면 표시만 가리는 것이며 보안 장치는 아니다.
+// 오른쪽 위 자물쇠 버튼에 비밀번호를 넣으면 그 브라우저에서 관리자 모드가 유지된다. 다시 누르면 끈다.
+// (주소 끝 ?admin=1 / ?admin=0 도 된다.) 화면 표시만 가리는 것이며 보안 장치는 아니다.
+const ADMIN_HASH = '026755cd29cc4a49c2aaa3f41ba6599f980c4946be053dc8ed3f35e595e41b2f';   // 관리자 비밀번호의 SHA-256
 const ADMIN = (() => {
   const q = new URLSearchParams(location.search).get('admin');
   try {
@@ -440,6 +443,20 @@ const ADMIN = (() => {
     return localStorage.getItem('ssdram-admin') === '1';
   } catch (e) { return q === '1'; }
 })();
+
+async function toggleAdmin() {
+  const save = v => { try { v ? localStorage.setItem('ssdram-admin', '1') : localStorage.removeItem('ssdram-admin'); } catch (e) {} };
+  if (ADMIN) {
+    if (confirm('관리자 모드를 끌까요?')) { save(false); location.href = location.pathname + location.hash; }
+    return;
+  }
+  const pw = prompt('관리자 비밀번호');
+  if (!pw) return;
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+  const hex = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+  if (hex !== ADMIN_HASH) return alert('비밀번호가 맞지 않습니다');
+  save(true); location.href = location.pathname + location.hash;
+}
 
 function noticeHtml(issues) {
   if (!ADMIN || !issues.length) return '';
@@ -777,12 +794,16 @@ function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
   try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
   $('themeBtn').innerHTML = `<i class="fa-solid ${theme === 'dark' ? 'fa-sun' : 'fa-moon'}"></i>`;
+  $('adminBtn').innerHTML = `<i class="fa-solid ${ADMIN ? 'fa-lock-open' : 'fa-lock'}"></i>`;
+  $('adminBtn').classList.toggle('on', ADMIN);
+  $('adminBtn').title = ADMIN ? '관리자 모드 켜짐 (누르면 끔)' : '관리자 모드';
   if (DATA) show(current);
 }
 
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-tab],[data-range],#themeBtn');
+  const t = e.target.closest('[data-tab],[data-range],#themeBtn,#adminBtn');
   if (!t) return;
+  if (t.id === 'adminBtn') return toggleAdmin();
   if (t.id === 'themeBtn') return setTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
   if (t.dataset.tab) { show(t.dataset.tab); scrollTo({top: 0}); }
   if (t.dataset.range) { range = t.dataset.range; drawMarket(); }
