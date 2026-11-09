@@ -2620,7 +2620,7 @@
      {
       "maker": "Phison",
       "usage": "해외",
-      "open": 0,
+      "open": 7,
       "received": 0,
       "pending": 0,
       "end": [
@@ -2637,16 +2637,16 @@
      {
       "maker": "Kernel & Core",
       "usage": "공용",
-      "open": 3054,
+      "open": 3025,
       "received": 0,
       "pending": 0,
       "end": [
-       3002,
-       2966,
-       2736,
-       2506,
-       2293.96,
-       2081.93
+       2973,
+       2937,
+       2707,
+       2477,
+       2264.96,
+       2052.93
       ],
       "grade": "good",
       "short_idx": null
@@ -2654,16 +2654,16 @@
      {
       "maker": "Transcend",
       "usage": "해외",
-      "open": 1680,
+      "open": 1702,
       "received": 0,
       "pending": 0,
       "end": [
-       1325,
-       1315,
-       1125,
-       925,
-       632.87,
-       340.74
+       1354,
+       1344,
+       1154,
+       954,
+       661.87,
+       369.74
       ],
       "grade": "good",
       "short_idx": null
@@ -2729,16 +2729,16 @@
      {
       "maker": "Transcend",
       "usage": "공용",
-      "open": 1375,
+      "open": 1233,
       "received": 0,
       "pending": 0,
       "end": [
-       1375,
-       1125,
-       1085,
-       995,
-       885,
-       775
+       1233,
+       983,
+       943,
+       853,
+       743,
+       633
       ],
       "grade": "good",
       "short_idx": null
@@ -2950,16 +2950,16 @@
      {
       "maker": "Kernel & Core",
       "usage": "공용",
-      "open": 903,
+      "open": 843,
       "received": 0,
       "pending": 0,
       "end": [
-       903,
-       903,
-       803,
-       703,
-       644.83,
-       586.66
+       843,
+       843,
+       743,
+       643,
+       584.83,
+       526.66
       ],
       "grade": "good",
       "short_idx": null
@@ -2967,16 +2967,16 @@
      {
       "maker": "Tammuz",
       "usage": "해외",
-      "open": 1568,
+      "open": 1535,
       "received": 0,
       "pending": 0,
       "end": [
-       1153,
-       1073,
-       898,
-       638,
-       367.5,
-       97.01
+       1120,
+       1040,
+       865,
+       605,
+       334.5,
+       64.01
       ],
       "grade": "good",
       "short_idx": null
@@ -2984,16 +2984,16 @@
      {
       "maker": "Crucial",
       "usage": "해외",
-      "open": 2945,
+      "open": 2895,
       "received": 0,
       "pending": 0,
       "end": [
-       2945,
-       2695,
-       2515,
-       2380,
-       2215.67,
-       2051.33
+       2895,
+       2645,
+       2465,
+       2330,
+       2165.67,
+       2001.33
       ],
       "grade": "good",
       "short_idx": null
@@ -3042,7 +3042,16 @@
   ],
   "pos": [],
   "adjustments": [],
-  "issues": []
+  "issues": [
+   {
+    "code": "JK50-10022A",
+    "msg": "제조사별 계산 재고 합계가 시스템 월초재고 1,375개와 -142개 차이 납니다. 설정.xlsx › 제조사 시트에서 JK50-10022A 행들의 기준일을 2026-11-01로 바꾸고, 기초수량에 그날 제조사별 실사 수량을 적어 주세요. (지금 계산값: Transcend 1,233)"
+   },
+   {
+    "code": "JK51-10012B",
+    "msg": "제조사별 계산 재고 합계가 시스템 월초재고 5,416개와 -143개 차이 납니다. 설정.xlsx › 제조사 시트에서 JK51-10012B 행들의 기준일을 2026-11-01로 바꾸고, 기초수량에 그날 제조사별 실사 수량을 적어 주세요. (지금 계산값: Kernel & Core 843, Tammuz 1,535, Crucial 2,895)"
+   }
+  ]
  },
  "purchase": {
   "receipts": {
@@ -3653,7 +3662,7 @@
     "qty": 1500,
     "price": 44.5,
     "maker": "Crucial",
-    "needs_maker": true,
+    "needs_maker": false,
     "vendor": "보이스아이주식회사",
     "no": "PUGR20261001-0044"
    },
