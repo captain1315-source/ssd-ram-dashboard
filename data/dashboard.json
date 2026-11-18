@@ -2638,6 +2638,13 @@
     "high": 148,
     "low": 125,
     "src": "TrendForce DRAM Contract Price (2H Aug, trendforce.com 현재 공개 표), web.archive.org 확인"
+   },
+   {
+    "d": "2026-09-30",
+    "avg": 148,
+    "high": 151,
+    "low": 132,
+    "src": "TrendForce DRAM Contract Price (2H Sep), trendforce.com 공개 표 자동 수집"
    }
   ],
   "ddr5_contract": [
@@ -2717,6 +2724,13 @@
     "high": 141,
     "low": 118,
     "src": "TrendForce DRAM Contract Price (2H Aug, trendforce.com 현재 공개 표), web.archive.org 확인"
+   },
+   {
+    "d": "2026-09-30",
+    "avg": 133,
+    "high": 141,
+    "low": 118,
+    "src": "TrendForce DRAM Contract Price (2H Sep), trendforce.com 공개 표 자동 수집"
    }
   ]
  },
