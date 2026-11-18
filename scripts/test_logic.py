@@ -271,6 +271,34 @@ def test_page_text_turns_cells_into_pipe_separated_text():
     assert fp.page_text(raw).strip() == "DDR4 8Gb (1Gx8) eTT | 6.35 | 5.70 |"
 
 
+CONTRACT_PAGE = ("DRAM Contract Price (2H Sep) | Oct. DRAM contract price updated on 10/30/2026. | "
+                 "Last Update 2026-09-30 17:00 (GMT+8) | Item | Session High | Session Low | Session Average | "
+                 "DDR5 8GB SO-DIMM | 141.00 | 118.00 | 133.00 | — | 0.00 % | DDR4 16GB SO-DIMM | 295.00 | 255.00 | 275.00 | "
+                 "DDR4 8GB SO-DIMM | 151.00 | 132.00 | 148.00 | ▲ | 4.23 %")
+
+
+def test_contract_table_reads_public_contract_rows():
+    label, day, values = fp.contract_table(CONTRACT_PAGE)
+    assert (label, day) == ("2H Sep", "2026-09-30")
+    assert values == {"DDR4 8GB SO-DIMM": (151, 132, 148), "DDR5 8GB SO-DIMM": (141, 118, 133)}
+    assert fp.contract_table("nothing") is None
+
+
+def test_contract_rows_insert_after_same_item_and_skip_existing_month():
+    import openpyxl
+    wb = openpyxl.Workbook(); ws = wb.active
+    ws.append(["Date"])
+    ws.append([datetime(2026, 8, 31), "DRAM Contract", "DDR4 8GB SO-DIMM", 148, 125, 142])
+    ws.append(["▼ DDR5"])
+    ws.append([datetime(2026, 8, 31), "DRAM Contract", "DDR5 8GB SO-DIMM", 141, 118, 133])
+    rows = fp.contract_rows(ws, fp.contract_table(CONTRACT_PAGE))
+    assert [(i, r[2]) for i, r in rows] == [(5, "DDR5 8GB SO-DIMM"), (3, "DDR4 8GB SO-DIMM")]
+    ddr4 = rows[1][1]
+    assert ddr4[3:6] == [151, 132, 148] and ddr4[8] == round(6 / 142, 4)
+    ws.append([datetime(2026, 9, 30), "DRAM Contract", "DDR5 8GB SO-DIMM", 141, 118, 133])
+    assert [r[2] for _, r in fp.contract_rows(ws, fp.contract_table(CONTRACT_PAGE))] == ["DDR4 8GB SO-DIMM"]
+
+
 def test_table_update_reads_date_and_hour():
     assert fp.table_update(PAGE.format(time="18:10"), "DRAM Spot Price") == ("2026-10-02", 18)
     assert fp.table_update(PAGE.format(time="18:10"), "Wafer Spot Price") == ("2026-09-28", 14)
