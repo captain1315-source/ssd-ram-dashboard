@@ -2815,11 +2815,11 @@
  "inventory": {
   "base_month": "2026-11",
   "as_of": "2026-11-23",
-  "computed_at": "2026-11-23 08:39",
+  "computed_at": "2026-11-23 10:02",
   "uploads": {
    "기초재고": "2026-11-02 18:27",
-   "입고_RAW": "2026-11-23 08:35",
-   "발주_RAW": "2026-11-20 16:00"
+   "입고_RAW": "2026-11-23 09:34",
+   "발주_RAW": "2026-11-23 09:42"
   },
   "months": [
    "11월말",
@@ -4826,41 +4826,50 @@
   "issues": []
  },
  "market": {
-  "updated": "2026-10-02",
-  "week": "2026년 10월 1주차",
-  "headline": "TrendForce 9/30 4Q26 전망: 계약가 상승은 지속되나(일반 DRAM +10~15%, NAND +15~20% QoQ) 증가 속도는 둔화. 클라이언트/소비자 SSD는 공급사 유연 가격 기조로 전환.",
+  "updated": "2026-11-23",
+  "week": "2026년 11월 4주차",
+  "headline": "NAND와 DRAM이 갈라졌다. TrendForce가 11/19 NAND 계약가 전망을 낮춰 **1Q27부터 하락(0~5% QoQ)**으로 돌렸고, 일반 DRAM 계약가는 1Q27에도 **+5~10%** 오를 전망이다. DDR4 현물은 3주째 약세.",
   "sections": [
    {
     "title": "NAND Flash (SSD)",
     "items": [
      {
       "kind": "계약가",
-      "text": "TrendForce 9/30 공식 4Q26 전망 — 전체 NAND 계약가 **+15~20% QoQ**. 엔터프라이즈 SSD는 전분기보다 증가폭이 더 커지는 유일한 카테고리(2026년 비트수요 +80% YoY 이상 전망). 반면 클라이언트/소비자 SSD는 구매자 재고 충분·조달 수요 제한으로 공급사가 인상폭을 억제하는 유연한 가격 기조로 전환.",
+      "text": "TrendForce 11/19 발표: 4Q26 NAND 계약가 상승 전망을 **+8~13%**로 낮췄고(9/30 전망 +15~20%), **1Q27 0~5% QoQ 하락**, 2Q27부터 모든 제품군이 하락 국면에 들어설 것으로 봤다. 중국 CSP의 2027년 엔터프라이즈 SSD 주문 축소가 북미 증가분보다 크고, 2027년 비트 공급 증가율(25~30% YoY)이 수요를 크게 웃돈다는 이유다.",
       "sources": [
+       {
+        "label": "TrendForce 2026-11-19",
+        "url": "https://www.trendforce.com/presscenter/news/20261119-13314.html"
+       },
        {
         "label": "TrendForce 2026-09-30",
         "url": "https://www.trendforce.com/presscenter/news/20260930-13258.html"
-       },
-       {
-        "label": "TrendForce 4Q26 전망 2026-09-24",
-        "url": "https://www.trendforce.com/research/download/RP260924PL"
        }
       ]
      },
      {
       "kind": "현물가",
-      "text": "NAND 512Gb TLC 웨이퍼 현물 9/21 **$19.883, -1.00%**로 약세. 현물 거래 '신중·한산', 공급사 호가가 하단 지지.",
+      "text": "512Gb TLC 웨이퍼 현물 11/2 주 **$16.152(-4.33%)**, 11/9 주 **$14.238(-0.20%)**. 유통 재고 정리로 현물이 최근 **20% 넘게** 급락했고, 현물과 계약가 차이가 20%를 넘어 계약가 협상을 누르고 있다.",
       "sources": [
        {
-        "label": "TrendForce 2026-09-23",
-        "url": "https://www.trendforce.com/news/2026/09/23/insights-memory-spot-price-update-dram-spot-prices-hold-cautious-tone-ddr4-2gx8-drops-3-6/"
+        "label": "TrendForce 2026-11-04",
+        "url": "https://www.trendforce.com/news/2026/11/04/insights-memory-spot-price-update-mainstream-ddr4-prices-dip-0-09-as-spot-premium-keeps-buyers-on-sidelines/"
+       },
+       {
+        "label": "TrendForce 2026-11-18",
+        "url": "https://www.trendforce.com/news/2026/11/18/insights-memory-spot-price-update-nand-spot-contract-price-gap-exceeds-20-amid-weak-demand"
        }
       ]
      },
      {
       "kind": "구조",
-      "text": "HBM/AI 인프라 수요로 엔터프라이즈 SSD가 캐파 대부분 흡수 → 저용량/클라이언트 SSD 물량 경쟁·납기 리스크 지속(구조 변동 없음). SLC NAND·NOR Flash 구조적 부족 지속.",
-      "sources": []
+      "text": "TrendForce는 2027년 NAND 설비투자가 **26.7% 늘어 299억 달러**에 이를 것으로 봤다. 한편 2027년 저가 메모리 재고가 바닥나면 완제품 가격이 오르고 브랜드들이 기기당 저장 용량을 줄일 것이라고 경고했다.",
+      "sources": [
+       {
+        "label": "TrendForce 2026-11-19",
+        "url": "https://www.trendforce.com/presscenter/news/20261119-13314.html"
+       }
+      ]
      }
     ]
    },
@@ -4869,46 +4878,46 @@
     "items": [
      {
       "kind": "현물가",
-      "text": "DDR4 1Gx8 3200 현물 **9/22 $46.04(전주 $45.79 → +0.55%)** — 최고치권 유지하나 상승 모멘텀 둔화(전주 +0.70% → 금주 +0.55%). ⚠️ DDR4 2Gx8 브랜드 칩 -3.6% 추가 조정(매수세 부재) → 밀도별 혼조 심화.",
+      "text": "DDR4 1Gx8 3200 현물 평균 10/28 $46.86 → 11/3 **$46.82(-0.09%)** → 11/17 **$44.25(전주 $44.89 대비 -1.43%)**. 현물이 공급사 공식가보다 높아 매수자가 관망하고 거래량이 크게 줄었다. DDR5 브랜드 현물은 대체로 보합.",
       "sources": [
        {
-        "label": "TrendForce DRAMeXchange 2026-09-23",
-        "url": "https://www.trendforce.com/news/2026/09/23/insights-memory-spot-price-update-dram-spot-prices-hold-cautious-tone-ddr4-2gx8-drops-3-6/"
+        "label": "TrendForce 2026-11-04",
+        "url": "https://www.trendforce.com/news/2026/11/04/insights-memory-spot-price-update-mainstream-ddr4-prices-dip-0-09-as-spot-premium-keeps-buyers-on-sidelines/"
+       },
+       {
+        "label": "TrendForce 2026-11-18",
+        "url": "https://www.trendforce.com/news/2026/11/18/insights-memory-spot-price-update-nand-spot-contract-price-gap-exceeds-20-amid-weak-demand"
        }
       ]
      },
      {
       "kind": "계약가",
-      "text": "TrendForce 9/30 4Q26 일반 DRAM 계약가 **+10~15% QoQ** — 상승 지속되나 전분기 대비 증가 속도 둔화. 서버 DRAM은 4Q26에도 공급부족 지속(일부 공급사 LTA로 평균 대비 인상 지연). AI 서버 수요가 상승 견인, 소비자측 가격 압력은 잔존.",
+      "text": "TrendForce 서울 로드쇼(11/18) 보도: 일반 DRAM 평균판매가 4Q26 **+10~15%**, 1Q27 **+5~10%**, 2Q27 +3~8%, 3Q27·4Q27 각 0~5% QoQ. 상승폭은 분기마다 줄지만 2027년 중 하락 전환은 없다고 봤다. DDR4만 따로 낸 전망은 확인하지 못했다.",
       "sources": [
        {
-        "label": "TrendForce 2026-09-30",
-        "url": "https://www.trendforce.com/presscenter/news/20260930-13258.html"
+        "label": "TokenPost 2026-11-18",
+        "url": "https://www.tokenpost.com/news/business/60184"
+       },
+       {
+        "label": "BigGo Finance 2026-11-18",
+        "url": "https://finance.biggo.com/news/0382166f-bd40-47d3-9b43-f7ba6f7bd0f8"
        }
       ]
      },
      {
       "kind": "구조",
-      "text": "HBM4 수요로 Samsung·SK hynix DRAM 재고 10일 미만 기조 지속, DDR4 단종 연장에도 개방시장 물량 제한(구조 변동 없음).",
-      "sources": [
-       {
-        "label": "Digitimes 2026-09-07",
-        "url": "https://www.digitimes.com/news/a20260907VL217/samsung-sk-hynix-dram-hbm4-demand.html"
-       },
-       {
-        "label": "Microchip USA",
-        "url": "https://www.microchipusa.com/industry-news/samsung-and-sk-hynix-extend-ddr4-lifecycles"
-       }
-      ]
+      "text": "DDR4는 주요 3사가 단계적으로 생산을 줄이는 중이며, 남은 물량은 서버·장기계약 고객 위주로 배정된다는 구조는 그대로다. 11월 들어 단종 일정이 새로 바뀌었다는 보도는 찾지 못했다.",
+      "sources": []
      }
     ]
    }
   ],
   "implications": [
-   "금주 핵심은 TrendForce 9/30 공식 4Q26 전망이다. 계약가 상승은 지속(일반 DRAM +10~15%, NAND +15~20%)되나 **증가 속도가 둔화**되고, 특히 클라이언트/소비자 SSD는 구매자 재고 충분으로 공급사 유연 가격 기조로 전환 — 전주의 \"저용량 SSD 단가·납기 상방 압력 확대\" 경고 대비 단기 단가 압력이 다소 완화된 신호다.",
-   "당사 SSD 5종은 대부분 저용량 클라이언트급이라 즉각적 단가 급등 리스크는 낮아졌으나, 엔터프라이즈가 캐파를 흡수하는 구조는 유지되어 **납기 리스크는 상존**.",
-   "DDR4는 일반 DRAM 계약가 +10~15%·서버 공급부족 지속으로 **DDR4 4GB·8GB 계약 물량 조기 락인 권고 유지**.",
-   "현물은 1Gx8 모멘텀 둔화·2Gx8 -3.6%로 단기 혼조이나, 실제 입고가를 좌우하는 계약가는 상방 → **현물 조정에 현혹되지 말 것**."
+   "**지난주(10/2)와 달라진 점**: NAND 전망이 '상승 지속'에서 '1Q27부터 하락'으로 바뀌었다. DRAM은 여전히 상승 전망이지만 DDR4 현물은 최고치권에서 3주째 내려오고 있다. SSD는 서두를 이유가 줄었고 RAM은 그렇지 않다.",
+   "**SSD M.2 256GB(발주 필요, Transcend 단독)**: 2월말 부족 전망이라 발주 자체는 미룰 수 없다. 다만 NAND 현물이 20% 넘게 빠졌고 계약가도 1Q27 하락 전망이므로, 2월 부족분을 메우는 최소 수량만 넣고 8월 입고가 $74.9보다 낮은 단가를 요구할 것. 나머지는 1Q27 이후 나눠 발주한다.",
+   "**SSD 128GB(2.5\"·M.2 모두 정상)**: 4월말까지 재고가 충분하다. 추가 발주는 보류하고 1Q27 가격 하락을 확인한 뒤 협상한다.",
+   "**DDR4 4GB(발주 필요, 커널앤코어 국내용 3월말 부족)**: DRAM 계약가는 1Q27에도 +5~10% 전망이라 기다려도 싸지지 않는다. 현물 약세를 근거로 단가는 버티되, 3월 부족분은 이번 달 안에 발주를 확정할 것.",
+   "**DDR4 8GB(정상)**: eTT 현물 8개 값이 11/19 **$43.92**(10월 말 $5.97→$5.49, 약 -8%)로 10월 입고단가 $44.5와 거의 같다. 4월말까지 재고가 있으니 급하게 살 필요는 없고, 다음 발주 때 eTT 하락분을 단가 협상 근거로 쓴다."
   ],
   "item_notes": {}
  }
