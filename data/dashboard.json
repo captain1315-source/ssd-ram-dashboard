@@ -1038,6 +1038,12 @@
     "avg": 43.12,
     "high": 77,
     "low": 24.2
+   },
+   {
+    "d": "2026-11-27",
+    "avg": 42.71,
+    "high": 77,
+    "low": 24.2
    }
   ],
   "ett_spot": [
@@ -1754,6 +1760,12 @@
     "avg": 5.33,
     "high": 5.6,
     "low": 5.05
+   },
+   {
+    "d": "2026-11-27",
+    "avg": 5.31,
+    "high": 5.6,
+    "low": 5.05
    }
   ],
   "ddr5_spot": [
@@ -2206,6 +2218,12 @@
     "avg": 60.77,
     "high": 71.45,
     "low": 45.6
+   },
+   {
+    "d": "2026-11-27",
+    "avg": 60.57,
+    "high": 71.45,
+    "low": 45.6
    }
   ],
   "ddr5_ett_spot": [
@@ -2338,6 +2356,12 @@
    {
     "d": "2026-11-26",
     "avg": 31,
+    "high": 32,
+    "low": 30.6
+   },
+   {
+    "d": "2026-11-27",
+    "avg": 30.98,
     "high": 32,
     "low": 30.6
    }
@@ -2911,11 +2935,11 @@
  "inventory": {
   "base_month": "2026-11",
   "as_of": "2026-11-27",
-  "computed_at": "2026-11-27 12:54",
+  "computed_at": "2026-11-27 16:04",
   "uploads": {
    "기초재고": "2026-11-02 18:27",
-   "입고_RAW": "2026-11-27 12:51",
-   "발주_RAW": "2026-11-27 12:51"
+   "입고_RAW": "2026-11-27 16:01",
+   "발주_RAW": "2026-11-27 16:00"
   },
   "months": [
    "11월말",
@@ -4105,7 +4129,8 @@
     "2026-07",
     "2026-08",
     "2026-09",
-    "2026-10"
+    "2026-10",
+    "2026-11"
    ],
    "rows": [
     {
@@ -4123,7 +4148,8 @@
       30.5,
       31.5,
       null,
-      null
+      null,
+      29
      ]
     },
     {
@@ -4138,6 +4164,7 @@
       null,
       36,
       30,
+      null,
       null,
       null,
       null,
@@ -4159,7 +4186,8 @@
       31,
       30,
       null,
-      31
+      31,
+      27.5
      ]
     },
     {
@@ -4173,6 +4201,7 @@
       39,
       null,
       38.5,
+      null,
       null,
       null,
       null,
@@ -4195,7 +4224,8 @@
       null,
       38.5,
       25,
-      22
+      22,
+      null
      ]
     },
     {
@@ -4211,6 +4241,7 @@
       null,
       null,
       39.22,
+      null,
       null,
       null,
       null
@@ -4231,7 +4262,8 @@
       43,
       40.5,
       null,
-      null
+      null,
+      46
      ]
     },
     {
@@ -4246,6 +4278,7 @@
       null,
       81,
       50,
+      null,
       null,
       null,
       null,
@@ -4267,7 +4300,8 @@
       52,
       null,
       null,
-      53
+      53,
+      43.5
      ]
     },
     {
@@ -4281,6 +4315,7 @@
       78,
       null,
       63.6,
+      null,
       null,
       null,
       null,
@@ -4303,7 +4338,8 @@
       null,
       52,
       47.5,
-      38.5
+      38.5,
+      null
      ]
     },
     {
@@ -4321,7 +4357,27 @@
       71.9,
       null,
       null,
+      null,
       null
+     ]
+    },
+    {
+     "cat": "RAM",
+     "spec": "DDR4 16GB",
+     "maker": "Kernel&core",
+     "p": [
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      86
      ]
     },
     {
@@ -4339,7 +4395,8 @@
       95,
       null,
       null,
-      null
+      null,
+      93.5
      ]
     },
     {
@@ -4357,7 +4414,8 @@
       null,
       null,
       null,
-      122
+      122,
+      null
      ]
     },
     {
@@ -4373,6 +4431,7 @@
       null,
       null,
       110,
+      null,
       null,
       null,
       null
@@ -4393,7 +4452,8 @@
       128,
       null,
       null,
-      125
+      125,
+      null
      ]
     },
     {
@@ -4411,7 +4471,8 @@
       209,
       null,
       null,
-      225
+      225,
+      null
      ]
     },
     {
@@ -4429,6 +4490,7 @@
       19.61,
       21.74,
       null,
+      null,
       null
      ]
     },
@@ -4441,6 +4503,7 @@
       null,
       null,
       45.5,
+      null,
       null,
       null,
       null,
@@ -4465,6 +4528,7 @@
       null,
       null,
       null,
+      null,
       null
      ]
     },
@@ -4483,6 +4547,7 @@
       null,
       null,
       null,
+      null,
       null
      ]
     },
@@ -4496,6 +4561,7 @@
       null,
       66,
       70,
+      null,
       null,
       null,
       null,
@@ -4519,6 +4585,7 @@
       null,
       null,
       null,
+      null,
       null
      ]
     },
@@ -4533,6 +4600,7 @@
       39.7,
       null,
       39.7,
+      null,
       null,
       null,
       null,
@@ -4555,6 +4623,7 @@
       35.95,
       39.86,
       null,
+      null,
       null
      ]
     },
@@ -4570,6 +4639,7 @@
       null,
       null,
       107,
+      null,
       null,
       null,
       null,
@@ -4591,6 +4661,7 @@
       null,
       null,
       null,
+      null,
       null
      ]
     },
@@ -4603,6 +4674,7 @@
       null,
       null,
       98,
+      null,
       null,
       null,
       null,
@@ -4627,6 +4699,7 @@
       null,
       null,
       null,
+      null,
       null
      ]
     },
@@ -4641,6 +4714,7 @@
       62.4,
       null,
       62.4,
+      null,
       null,
       null,
       null,
@@ -4663,6 +4737,7 @@
       null,
       21.74,
       null,
+      null,
       null
      ]
     },
@@ -4681,6 +4756,7 @@
       null,
       null,
       null,
+      null,
       null
      ]
     },
@@ -4690,6 +4766,7 @@
      "maker": "Phison",
      "p": [
       16.9,
+      null,
       null,
       null,
       null,
@@ -4717,6 +4794,7 @@
       42.2,
       null,
       null,
+      null,
       null
      ]
     },
@@ -4731,6 +4809,7 @@
       39.2,
       null,
       39.2,
+      null,
       null,
       null,
       null,
@@ -4753,6 +4832,7 @@
       null,
       39.86,
       null,
+      null,
       null
      ]
     },
@@ -4770,6 +4850,7 @@
       null,
       null,
       74.9,
+      null,
       null,
       null
      ]
@@ -4789,6 +4870,7 @@
       null,
       null,
       null,
+      null,
       null
      ]
     },
@@ -4798,6 +4880,7 @@
      "maker": "Phison",
      "p": [
       24.5,
+      null,
       null,
       null,
       null,
@@ -4825,6 +4908,7 @@
       75,
       null,
       null,
+      null,
       null
      ]
     },
@@ -4839,6 +4923,7 @@
       61.9,
       null,
       61.9,
+      null,
       null,
       null,
       null,
@@ -4861,6 +4946,7 @@
       102,
       null,
       null,
+      null,
       null
      ]
     },
@@ -4879,6 +4965,7 @@
       30.07,
       null,
       null,
+      null,
       null
      ]
     },
@@ -4895,6 +4982,7 @@
       null,
       null,
       47.06,
+      null,
       null,
       null,
       null
