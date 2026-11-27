@@ -171,6 +171,10 @@ details.tv summary { cursor: pointer; color: var(--primary); font-weight: 700; }
 details.tv .scroll { max-height: 300px; overflow: auto; margin-top: 8px; border: 1px solid var(--border); border-radius: 12px; }
 details.tv th { position: sticky; top: 0; }
 #quoteTable { max-height: none; }   /* 견적 단가 표는 높이 제한 없이 전체를 보여 준다 */
+.qspecs { display: grid; grid-template-columns: auto 1fr; gap: 8px 10px; align-items: center; margin-bottom: 12px; }
+.qspecs .lbl { font-size: 12px; font-weight: 700; color: var(--sub); }
+.pill.sm { font-size: 12px; padding: 4px 11px; }
+#quoteTable td.best { font-weight: 800; color: var(--primary); }
 
 /* 시장 동향 */
 .trend-list { list-style: none; margin: 0; padding: 0; }
@@ -365,7 +369,7 @@ a:hover { text-decoration: underline; }
     </div>
     <div class="card">
       <div class="card-head"><h2><i class="fa-solid fa-tags"></i>공급사별 견적 단가</h2><div class="meta">단가현황.xlsx, 같은 달에는 가장 최근 견적</div></div>
-      <div class="card-body"><details class="tv" style="margin-top:0" open><summary>전체 표 접기·펼치기</summary><div class="scroll" id="quoteTable"></div></details></div>
+      <div class="card-body"><div class="qspecs" id="quoteSpecs"></div><div class="scroll" id="quoteTable"></div></div>
     </div>
   </section>
 
@@ -757,10 +761,33 @@ function drawPurchase() {
 
   $('recentTable').innerHTML = table(['입고일', '품목', '제조사', '거래처', '수량', '단가(USD)'],
     DATA.purchase.recent.map(r => [r.d, `<strong>${esc(itemName(r.code))}</strong> <span class="code">${r.code}</span>`, r.maker ? esc(r.maker) : r.needs_maker ? makerCell('미지정') : '-', esc(r.vendor), n0(r.qty), `<span class="num" style="font-size:14px">${usd(r.price)}</span>`]), [0, 1, 2, 3]);
-  const Q = DATA.purchase.quotes;
-  $('quoteTable').innerHTML = table(['구분', '스펙', '제조사', ...Q.months.map(m => m.slice(2).replace('-', '.'))],
-    Q.rows.map(r => [esc(r.cat), esc(r.spec), esc(r.maker), ...r.p.map(v => v == null ? '' : usd(v))]), [0, 1, 2]);
+  drawQuotes();
   $('purchaseAlerts').innerHTML = noticeHtml(DATA.purchase.issues || []);
+}
+
+// 공급사별 견적: 스펙 버튼으로 하나만 골라 보여 주고, 같은 달 최저가를 강조한다
+let quoteSpec = (() => { try { return localStorage.getItem('ssdram-quote-spec'); } catch (e) { return null; } })();
+function drawQuotes() {
+  const Q = DATA.purchase.quotes, specs = [];
+  Q.rows.forEach(r => { if (!specs.some(s => s.cat === r.cat && s.spec === r.spec)) specs.push({cat: r.cat, spec: r.spec}); });
+  if (!specs.length) { $('quoteSpecs').innerHTML = ''; $('quoteTable').innerHTML = '<p class="caption">견적 자료가 없습니다.</p>'; return; }
+  const key = s => s.cat + '|' + s.spec;
+  if (!specs.some(s => key(s) === quoteSpec)) quoteSpec = key(specs[0]);
+  $('quoteSpecs').innerHTML = [...new Set(specs.map(s => s.cat))].map(cat => `<span class="lbl">${esc(cat)}</span><div class="pills">` +
+    specs.map((s, i) => s.cat !== cat ? '' : `<button class="pill sm" data-qspec="${i}" aria-pressed="${key(s) === quoteSpec}">${esc(s.spec)}</button>`).join('') +
+    '</div>').join('');
+  const rows = Q.rows.filter(r => key(r) === quoteSpec);
+  const low = Q.months.map((_, k) => { const v = rows.map(r => r.p[k]).filter(x => x != null); return v.length > 1 ? Math.min(...v) : null; });
+  $('quoteTable').innerHTML = `<table><thead><tr><th class="l">제조사</th>${Q.months.map(m => `<th>${m.slice(2).replace('-', '.')}</th>`).join('')}</tr></thead><tbody>` +
+    rows.map(r => `<tr><td class="l">${esc(r.maker)}</td>${r.p.map((v, k) =>
+      `<td${v != null && v === low[k] ? ' class="best" title="이달 최저 견적"' : ''}>${v == null ? '' : usd(v)}</td>`).join('')}</tr>`).join('') +
+    '</tbody></table>';
+  $('quoteSpecs').onclick = e => {
+    const b = e.target.closest('[data-qspec]'); if (!b) return;
+    quoteSpec = key(specs[+b.dataset.qspec]);
+    try { localStorage.setItem('ssdram-quote-spec', quoteSpec); } catch (e) {}
+    drawQuotes();
+  };
 }
 
 /* ---------- 시장 동향 ---------- */
